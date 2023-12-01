@@ -24,6 +24,23 @@ hof_players <- hof_players %>%
   inner_join(People, by = "playerID") %>% 
   select(-c(11:22), -deathDate, -birthDate)
 
+# Calculate career Pitching Stats
+career_pitching <- Pitching %>% 
+  select(-yearID, -stint, -ERA, -BAOpp) %>% 
+  mutate(IP = round(IPouts / 3, 1),
+         .before = IPouts) %>% 
+  group_by(playerID) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  mutate(BAOpp = H / BFP,
+         ERA = ER * 9 / IP,
+         .after = SO) %>% 
+  mutate(POS = ifelse(GS / G >= 0.7, "SP", "RP"),
+         .before = W)
+# Pitching stats for the Hall of Fame players
+hof_pitching_stats <- career_pitching %>% 
+  semi_join(hof_players, by = "playerID")
+
+People %>% filter(playerID == "aardsda01")
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to our desired parameters
 Fielding <- Fielding %>% 
