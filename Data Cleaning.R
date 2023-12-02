@@ -89,7 +89,31 @@ hof_batting <- HallOfFame %>%
         group_by(playerID) %>% 
         summarise(across(-c(1:5), sum)) # Summarise for Career Stats
 
-# Append the pitching statistics for players on Hall of Fame
-# ballots
-HallOfFame %>% 
-        filter(category)
+# Additions From Nelson
+
+# HOF Pitching
+
+#Get career mean of pitching averages statistics
+hof_pitching_averages <- 
+  HallOfFame %>% 
+  filter(category == "Player") %>% 
+  distinct(playerID) %>%
+  inner_join(Pitching, by = "playerID") %>% 
+  group_by(playerID) %>% 
+  summarise(across(c(18,19), mean))
+
+# Append the pitching totals for players included on Hall of Fame ballots
+hof_pitching <- 
+  HallOfFame %>% 
+  filter(category == "Player") %>% 
+  distinct(playerID) %>%
+  inner_join(Pitching, by = "playerID") %>% 
+  group_by(playerID) %>% 
+  summarise(across(-c(1:4,18,19), sum))
+
+# Join averages and totals together
+hof_pitching <- 
+  hof_pitching %>%
+  inner_join(hof_pitching_averages, by = "playerID")
+
+# Note Columns SH, SF, GIDP has many missing values
