@@ -43,11 +43,36 @@ batters_fielding <- batters_fielding %>%
   summarise_if(is.numeric, sum) %>% 
   filter(G >= 175) # Only players with a substantial amount of fielding
 
+# Redefine the outfielder positions for their primary outfield 
+data("FieldingOFsplit")
+# Get the positions Left Field (LF), Center Field (CF), Right Field (RF)
+of_fielding <- FieldingOFsplit %>% 
+  group_by(playerID, POS) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  # Subset it to only those included in hall of fame data
+  semi_join(hof_players, by = "playerID") %>% 
+  # Update position to most frequently played position
+  mutate(POS = POS[which.max(G)]) %>% 
+  group_by(playerID, POS) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  filter(G >= 175)
+
+batters_fielding <- batters_fielding %>% 
+  # Join together with previous fielding stats
+  left_join(of_fielding, by = "playerID") %>% 
+  # Change the position variable to of_fielding$POS
+  mutate(POS.x = ifelse(!is.na(POS.y), POS.y, POS.x)) %>% 
+  # Remove the variables from of_fielding
+  select(-c(POS.y:DP.y)) %>% 
+  # Remove ".x" endings from the variables
+  rename_with(~gsub("\\.x", "", .), contains(".x"))
+
 # Subset Fielding Data to pitchers only
 pitchers_fielding <- Fielding %>% 
   select(-c(2:5), -c(14:18)) %>% 
   filter(POS == "P")
 
+# Hall Of Fame pitchers fielding data
 pitchers_fielding <- pitchers_fielding %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
@@ -178,8 +203,14 @@ ped_players <- People %>%
 
 # Add ped_use indicator to the batting stats
 hof_batting_stats <- hof_batting_stats %>% 
-  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"))
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
+         playerID = as.factor(playerID))
 
 # Add ped_use indicator to the pitching stats
 hof_pitching_stats <- hof_pitching_stats %>% 
-  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"))
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
+         playerID = as.factor(playerID))
+
+missForest(hof_batting_stats %>% 
+                         select_if(is.numeric))
+  
