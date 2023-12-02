@@ -148,15 +148,17 @@ num_awards <- AwardsPlayers %>%
 num_awards <- pivot_wider(data = num_awards,
             id_cols = playerID,
             names_from = awardID,
-            values_from = num_awards,
-            values_fill = 0)
+            values_from = num_awards)
 # Add the Award count for each of the batters
 hof_batting_stats <- hof_batting_stats %>% 
-  full_join(num_awards, by = "playerID")
+  full_join(num_awards, by = "playerID") %>% 
+  select(-`Rolaids Relief Man Award`, -`Cy Young Award`, 
+         -`Reliever of the Year Award`)
 
 # Add the Award count for each of the pitchers
 hof_pitching_stats <- hof_pitching_stats %>% 
-  full_join(num_awards, by = "playerID")
+  full_join(num_awards, by = "playerID") %>% 
+  select(-`Triple Crown`,-`Outstanding DH Award`)
 
 # Add major batting milestone indicator variables
 hof_batting_stats <- hof_batting_stats %>% 
@@ -203,14 +205,15 @@ ped_players <- People %>%
 
 # Add ped_use indicator to the batting stats
 hof_batting_stats <- hof_batting_stats %>% 
-  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
-         playerID = as.factor(playerID))
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(!is.na(G))
 
 # Add ped_use indicator to the pitching stats
 hof_pitching_stats <- hof_pitching_stats %>% 
-  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
-         playerID = as.factor(playerID))
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
+  mutate_if(is.character, as.factor) %>% 
+  filter(!is.na(G))
 
-missForest(hof_batting_stats %>% 
-                         select_if(is.numeric))
+missForest(as.data.frame(hof_batting_stats %>% select(-playerID)))
   
