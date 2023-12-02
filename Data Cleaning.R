@@ -82,7 +82,6 @@ hof_pitching_stats <- hof_pitching_stats %>%
   # Removes players who are not primarily pitchers
   filter(!is.na(POS)) 
 
-
 # Calculate career Batting Statistics
 career_batting <- Batting %>% 
   select(-yearID, -stint, -teamID, -lgID) %>% 
@@ -119,7 +118,8 @@ num_awards <- AwardsPlayers %>%
   filter(awardID %in% awards) %>% 
   group_by(playerID, awardID) %>% 
   summarise(num_awards = n())
-  
+
+# Pivot the data longer for easier formatting to add variables to the data.  
 num_awards <- pivot_wider(data = num_awards,
             id_cols = playerID,
             names_from = awardID,
