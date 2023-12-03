@@ -370,11 +370,7 @@ active_batting_stats <- active_batting_stats %>%
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Triple Crown` = as.factor(`Triple Crown`),
          inducted = c(NA)) %>% 
-<<<<<<< HEAD
   mutate_if(is.character, as.factor) %>% 
-=======
-  mutate_if(is.character, as.factor)
->>>>>>> 2a5e658646c1a9d781f4a723117f8d95cff9a942
   mutate(Range = (PO + A) / G, .after = `BB:SO`)
 
 # Add ped_use indicator to the pitching stats
