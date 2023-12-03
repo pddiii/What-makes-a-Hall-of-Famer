@@ -71,6 +71,7 @@ hof_batters_fielding <- hof_batters_fielding %>%
 # Calculate career Batting Statistics
 career_batting <- Batting %>% 
   select(-yearID, -stint, -teamID, -lgID) %>% 
+  replace(is.na(.), 0) %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Players with substantial amount of batting appearances
@@ -79,10 +80,6 @@ career_batting <- Batting %>%
 # Career Stats for Hall of Fame ballot hitters
 hof_batting_stats <- career_batting %>% 
   semi_join(hof_players, by = "playerID") %>% 
-  # Replace the missing statistics values with 0, since they were
-  # not tracked at the time, or may not have occurred
-  replace_na(list(AB = 0, H = 0, BB = 0, HBP = 0, SH = 0, SF = 0,
-                  SO = 0, X2B = 0, X3B = 0, HR = 0)) %>% 
   # Add batting rate stats
   mutate(PA = AB + BB + HBP + SF, # plate appearances
          BA = H / AB, # batting average
@@ -91,7 +88,9 @@ hof_batting_stats <- career_batting %>%
          OBP = (H + BB + HBP) / PA, # On Base Percentage
          OPS = SLG + OBP, # On Base plus Slugging Percentage
          `SO%` = SO / PA, # Strikeout Percentage
-         `BB%` = BB / PA) # Base-on-Balls (Walk) percentage
+         `BB%` = BB / PA, # Base-on-Balls (Walk) percentage
+         `BB:SO` = BB / SO # Walk to Strikeout Ratio
+         )
 
 # Join together the batting stats with their fielding stats
 hof_batting_stats <- hof_batting_stats %>% 
@@ -117,6 +116,7 @@ career_pitching <- Pitching %>%
   select(-yearID, -stint, -ERA, -BAOpp) %>% 
   mutate(IP = round(IPouts / 3, 1), # Innings Pitched
          .before = IPouts) %>% 
+  replace(is.na(.), 0) %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Calculate career stats for this
@@ -124,6 +124,7 @@ career_pitching <- Pitching %>%
          ERA = ER * 9 / IP, # Earned Run Average
          `SO%` = SO / BFP, # Strikeout Percentage
          `BB%` = BB / BFP, # Walk Percentage
+         `SO:BB` = SO / BB, # Strikeout to Walk Ratio
          .after = SO) %>% 
   # Differentiate between Starting Pitchers and Relief Pitchers
   mutate(POS = ifelse(GS / G >= 0.7, "SP", "RP"),
@@ -143,15 +144,7 @@ hof_pitching_stats <- hof_pitching_stats %>%
   filter(!is.na(POS)) 
 
 # Awards for Consideration
-awards <- c("Triple Crown", "Most Valuable Player", "World Series MVP", 
-            "Cy Young Award", "Rolaids Relief Man Award", "Gold Glove",
-            "Reliever of the Year Award", "Silver Slugger", 
-            "Pitching Triple Crown")
-
-# Fix Spelling error in the Awards Data
-AwardsPlayers <- AwardsPlayers %>% 
-  mutate(awardID = ifelse(awardID == "SIlver Slugger", "Silver Slugger", 
-                           awardID))
+awards <- c("Triple Crown", "Pitching Triple Crown")
 
 # Number of Awards by player, and awardID
 num_awards <- AwardsPlayers %>% 
@@ -171,23 +164,25 @@ hof_batting_stats <- hof_batting_stats %>%
   # Make sure it is only players previously included in batting data
   filter(playerID %in% hof_batters_fielding$playerID) %>% 
   # Remove the pitcher related season Awards
-  select(-`Rolaids Relief Man Award`, -`Cy Young Award`, 
-         -`Reliever of the Year Award`, -`Pitching Triple Crown`) %>% 
+  select(-`Pitching Triple Crown`) %>% 
   # Triple Crowns have always been tracked, so if it's missing then the
   # player never achieved a batting triple crown
-  mutate(`Triple Crown` = ifelse(is.na(`Triple Crown`), 0, `Triple Crown`))
+  mutate(`Triple Crown` = as.factor(ifelse(is.na(`Triple Crown`), 0, 
+                                           `Triple Crown`)) )
 
 # Add the Award count for each of the pitchers
 # Remove batting awards, we're only concerned with their pitching awards
-hof_pitching_stats <- hof_pitching_stats %>% 
-  full_join(num_awards, by = "playerID") %>% 
+hof_pitching_stats <- hof_pitching_stats %>%
+  full_join(num_awards, by = "playerID") %>%
   # Make sure it only includes players from previous batting data
-  filter(playerID %in% hof_pitchers_fielding$playerID) %>% 
+  filter(playerID %in% hof_pitchers_fielding$playerID) %>%
   # Remove batting related season awards
-  select(-`Triple Crown`, -`Silver Slugger`) %>% 
+  select(-`Triple Crown`) %>%
   # Same logic as for batting triple crown
-  mutate(`Pitching Triple Crown` = ifelse(is.na(`Pitching Triple Crown`), 0, 
-                                                `Pitching Triple Crown`) ) 
+  mutate(`Pitching Triple Crown` = as.factor(ifelse(
+                                  is.na(`Pitching Triple Crown`),
+                                  0, `Pitching Triple Crown`
+                                  ) ) )
 
 # Add major batting milestone indicator variables
 hof_batting_stats <- hof_batting_stats %>% 
@@ -247,15 +242,18 @@ hof_pitching_stats <- hof_pitching_stats %>%
 hof_induction <- hof_players %>% 
   select(playerID, inducted) %>% 
   group_by(playerID) %>% 
-  summarise(inducted = sum(inducted))
+  summarise(inducted = sum(inducted)) %>% 
+  mutate(inducted = as.factor(inducted))
 # Add the batter's Hall of Fame Induction status
 hof_batting_stats <- hof_batting_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
-  relocate(inducted, .before = G)
+  relocate(inducted, .before = G) %>% 
+  relocate(POS, .after = playerID)
 # Add the Pitcher's Hall of Fame Induction Status
 hof_pitching_stats <- hof_pitching_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
   relocate(inducted, .before = G)
+
 # get the Active Players for later prediction
 # Active Player = 10 years played, but not 5 years retired
 # For Hall Of Fame eligibility one must have a career length of 10 years
@@ -302,10 +300,8 @@ active_batters_fielding <- active_batters_fielding %>%
 # Career Stats for Hall of Fame ballot hitters
 active_batting_stats <- career_batting %>% 
   semi_join(active_players, by = "playerID") %>% 
-  # Replace the missing statistics values with 0, since they were
-  # not tracked at the time, or may not have occurred
-  replace_na(list(AB = 0, H = 0, BB = 0, HBP = 0, SH = 0, SF = 0,
-                  SO = 0, X2B = 0, X3B = 0, HR = 0)) %>% 
+  # Replace the missing statistics values with 0
+  replace(is.na(.), 0) %>% 
   # Add batting rate stats
   mutate(PA = AB + BB + HBP + SF, # plate appearances
          BA = H / AB, # batting average
@@ -314,7 +310,8 @@ active_batting_stats <- career_batting %>%
          OBP = (H + BB + HBP) / PA, # On Base Percentage
          OPS = SLG + OBP, # On Base plus Slugging Percentage
          `SO%` = SO / PA, # Strikeout Percentage
-         `BB%` = BB / PA) # Base-on-Balls (Walk) percentage
+         `BB%` = BB / PA, # Base-on-Balls (Walk) percentage
+         `BB:SO` = BB / SO) # Walk to Strikeout Ratio
 
 # Join together the batting stats with their fielding stats
 active_batting_stats <- active_batting_stats %>% 
@@ -346,8 +343,7 @@ active_batting_stats <- active_batting_stats %>%
   # Make sure it is only players previously included in batting data
   filter(playerID %in% active_batters_fielding$playerID) %>% 
   # Remove the pitcher related season Awards
-  select(-`Rolaids Relief Man Award`, -`Cy Young Award`, 
-         -`Reliever of the Year Award`, -`Pitching Triple Crown`) %>% 
+  select(-`Pitching Triple Crown`) %>% 
   replace(is.na(.), 0)
 
 # Add the Award count for each of the pitchers
@@ -357,7 +353,7 @@ active_pitching_stats <- active_pitching_stats %>%
   # Make sure it only includes players from previous batting data
   filter(playerID %in% active_pitchers_fielding$playerID) %>% 
   # Remove batting related season awards
-  select(-`Triple Crown`, -`Silver Slugger`) %>% 
+  select(-`Triple Crown`) %>% 
   # Replace NA Values in the data, only award columns
   replace(is.na(.), 0)
 
@@ -387,5 +383,5 @@ rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding
    active_pitchers_fielding, active_players, batters_fielding, career_batting,
    career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
    hof_of_fielding, hof_induction, hof_pitchers_fielding, hof_players,
-   num_awards, of_fielding, ped_players, People, pitchers_fielding, Pitching,
-   awards, ped_use)
+   num_awards, ped_players, People, pitchers_fielding, Pitching,
+   awards, ped_use, missing_awards)
