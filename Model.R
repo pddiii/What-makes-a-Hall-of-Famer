@@ -7,6 +7,7 @@ library(tidymodels)
 library(randomForest)
 library(xgboost)
 library(doParallel)
+library(caret)
 
 # Split the Hall of Fame data for batters into a training and testing
 # set
@@ -26,7 +27,7 @@ rf_batters_model <-
 # Random Forest recipe for Hall of Fame Batters
 rf_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_rm(playerID, GS, InnOuts) %>% 
+  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, GS, InnOuts) %>% 
   step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
@@ -77,16 +78,10 @@ set.seed(1)
 rf_batters_fit <- 
   rf_batters_wf %>% 
   fit(data = batters_training)
-
+# Random Forest predictions for Hall of Fame Batters
 rf_batters_predictions <- 
   rf_batters_fit %>% 
   predict(batters_testing) %>% 
-  cbind(batters_testing %>% select(playerID))
-
-active_hof <- rf_batters_fit %>% 
-  predict(active_batting_stats) %>% 
-  cbind(active_batting_stats %>% select(playerID)) %>% 
-  filter(.pred_class == 1)
-
-People %>% 
-  semi_join(active_hof, by = "playerID")
+  cbind(batters_testing$inducted, batters_testing %>% select(playerID))
+# Accuracy of the Random Forest Predictions
+confusionMatrix(table(rf_batters_predictions$.pred_class, batters_testing$inducted))
