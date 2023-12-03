@@ -26,8 +26,8 @@ rf_batters_model <-
 # Random Forest recipe for Hall of Fame Batters
 rf_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_rm(playerID) %>% 
-  step_impute_bag(all_predictors()) %>% 
+  step_rm(playerID, GS, InnOuts) %>% 
+  step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 # Random Forest workflow for Hall of Fame batters
@@ -83,6 +83,10 @@ rf_batters_predictions <-
   predict(batters_testing) %>% 
   cbind(batters_testing %>% select(playerID))
 
-rf_batters_fit %>% 
+active_hof <- rf_batters_fit %>% 
   predict(active_batting_stats) %>% 
-  cbind(active_batting_stats %>% select(playerID))
+  cbind(active_batting_stats %>% select(playerID)) %>% 
+  filter(.pred_class == 1)
+
+People %>% 
+  semi_join(active_hof, by = "playerID")
