@@ -308,7 +308,7 @@ active_batting_stats <- career_batting %>%
          OPS = SLG + OBP, # On Base plus Slugging Percentage
          `SO%` = SO / PA, # Strikeout Percentage
          `BB%` = BB / PA, # Base-on-Balls (Walk) percentage
-         `BB:SO` = BB / SO) # Walk to Strikeout Ratio
+         `BB:SO` = BB / SO ) # Walk to Strikeout Ratio
 
 # Join together the batting stats with their fielding stats
 active_batting_stats <- active_batting_stats %>% 
@@ -370,7 +370,8 @@ active_batting_stats <- active_batting_stats %>%
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Triple Crown` = as.factor(`Triple Crown`),
          inducted = c(NA)) %>% 
-  mutate_if(is.character, as.factor)
+  mutate_if(is.character, as.factor) %>% 
+  mutate(Range = (PO + A) / G, .after = `BB:SO`)
 
 # Add ped_use indicator to the pitching stats
 active_pitching_stats <- active_pitching_stats %>% 
