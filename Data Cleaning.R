@@ -30,7 +30,7 @@ hof_players <- hof_players %>%
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to batters only
 batters_fielding <- Fielding %>% 
-  select(-c(2:5), -c(14:18)) %>% 
+  select(-c(2:5, 14:18)) %>% 
   filter(POS != "P") # Pitchers have separate Data Set, no need to include
 
 # Redefine the numeric variable as Career Position Stats
@@ -70,8 +70,8 @@ hof_batters_fielding <- hof_batters_fielding %>%
 
 # Calculate career Batting Statistics
 career_batting <- Batting %>% 
-  select(-yearID, -stint, -teamID, -lgID) %>% 
-  replace(is.na(.), 0) %>% 
+  select(-yearID, -stint, -teamID, -lgID)  %>% 
+  mutate(across(G:SO, ~ifelse(is.na(.), 0, .))) %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Players with substantial amount of batting appearances
@@ -79,26 +79,17 @@ career_batting <- Batting %>%
 
 # Career Stats for Hall of Fame ballot hitters
 hof_batting_stats <- career_batting %>% 
-  semi_join(hof_players, by = "playerID") %>% 
-  # Add batting rate stats
-  mutate(PA = AB + BB + HBP + SF, # plate appearances
-         BA = H / AB, # batting average
-         `1B` = H - X2B - X3B - HR, # singles
-         SLG = (`1B` + 2 * X2B + 3 * X3B + 4 * HR) / AB, # Slugging %
-         OBP = (H + BB + HBP) / PA, # On Base Percentage
-         OPS = SLG + OBP, # On Base plus Slugging Percentage
-         `SO%` = SO / PA, # Strikeout Percentage
-         `BB%` = BB / PA, # Base-on-Balls (Walk) percentage
-         `BB:SO` = BB / SO # Walk to Strikeout Ratio
-         )
+  semi_join(hof_players, by = "playerID")
 
 # Join together the batting stats with their fielding stats
 hof_batting_stats <- hof_batting_stats %>% 
   full_join(hof_batters_fielding %>% 
               select(-G), by = "playerID") %>% 
   # Excludes the pitchers batting stats, we are not interested in those
-  filter(!is.na(POS))
-
+  filter(!is.na(POS)) %>% 
+  mutate(Range = (A + PO) / G)  # Range Factor for fielders 
+  
+  
 # Subset Fielding Data to pitchers only
 pitchers_fielding <- Fielding %>% 
   select(-c(2:5), -c(14:18)) %>% 
@@ -116,7 +107,6 @@ career_pitching <- Pitching %>%
   select(-yearID, -stint, -ERA, -BAOpp) %>% 
   mutate(IP = round(IPouts / 3, 1), # Innings Pitched
          .before = IPouts) %>% 
-  replace(is.na(.), 0) %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Calculate career stats for this
