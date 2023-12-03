@@ -71,11 +71,12 @@ hof_batters_fielding <- hof_batters_fielding %>%
 # Calculate career Batting Statistics
 career_batting <- Batting %>% 
   select(-yearID, -stint, -teamID, -lgID)  %>% 
-  mutate(across(G:SO, ~ifelse(is.na(.), 0, .))) %>% 
+  replace(is.na(.), 0) %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Players with substantial amount of batting appearances
-  filter(G >= 100, AB >= 500)
+  filter(G >= 100, AB >= 500) %>% 
+  select(-c(IBB:GIDP))
 
 # Career Stats for Hall of Fame ballot hitters
 hof_batting_stats <- career_batting %>% 
