@@ -75,8 +75,7 @@ career_batting <- Batting %>%
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Players with substantial amount of batting appearances
-  filter(G >= 100, AB >= 500) %>% 
-  select(-c(IBB:GIDP))
+  filter(G >= 100, AB >= 500)
 
 # Career Stats for Hall of Fame ballot hitters
 hof_batting_stats <- career_batting %>% 
@@ -88,9 +87,16 @@ hof_batting_stats <- hof_batting_stats %>%
               select(-G), by = "playerID") %>% 
   # Excludes the pitchers batting stats, we are not interested in those
   filter(!is.na(POS)) %>% 
-  mutate(Range = (A + PO) / G)  # Range Factor for fielders 
-  
-  
+  mutate(PA = AB + BB + HBP + SF, # plate appearances
+         BA = H / AB, # batting average
+         `1B` = H - X2B - X3B - HR, # singles
+         SLG = (`1B` + 2 * X2B + 3 * X3B + 4 * HR) / AB, # Slugging %
+         OBP = (H + BB + HBP) / PA, # On Base Percentage
+         OPS = SLG + OBP, # On Base plus Slugging Percentage
+         `SO%` = SO / PA, # Strikeout Percentage
+         `BB%` = BB / PA, # Base-on-Balls (Walk) percentage
+         `BB:SO` = BB / SO, # Walk to Strikeout Ratio
+         Range = (A + PO) / G )   # Range Factor for fielders 
 # Subset Fielding Data to pitchers only
 pitchers_fielding <- Fielding %>% 
   select(-c(2:5), -c(14:18)) %>% 
