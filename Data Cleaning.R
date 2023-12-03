@@ -370,12 +370,16 @@ active_pitching_stats <- active_pitching_stats %>%
 
 # Add ped_use indicator to the batting stats
 active_batting_stats <- active_batting_stats %>% 
-  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
+         `Triple Crown` = as.factor(`Triple Crown`),
+         inducted = c(NA)) %>% 
   mutate_if(is.character, as.factor)
 
 # Add ped_use indicator to the pitching stats
 active_pitching_stats <- active_pitching_stats %>% 
-  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
+         `Pitching Triple Crown` = as.factor(`Triple Crown`),
+         inducted = c(NA)) %>% 
   mutate_if(is.character, as.factor)
 
 # Remove the variables for sourcing the file for model purposes
@@ -384,4 +388,4 @@ rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding
    career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
    hof_of_fielding, hof_induction, hof_pitchers_fielding, hof_players,
    num_awards, ped_players, People, pitchers_fielding, Pitching,
-   awards, ped_use, missing_awards)
+   awards, ped_use)
