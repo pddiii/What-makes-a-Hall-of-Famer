@@ -1,5 +1,6 @@
 library(Lahman)
 library(tidyverse)
+library(missForest)
 # Load the Hall of Fame ballots data
 data(HallOfFame)
 # Load the Batting Data
@@ -34,7 +35,7 @@ batters_fielding <- Fielding %>%
 batters_fielding <- batters_fielding %>%
   group_by(playerID, POS) %>%
   summarise_if(is.numeric, sum) %>% 
-  # Subset to only the Hall of Fame players
+  # Subset to only the rows with matches in hof_players
   semi_join(hof_players, by = "playerID") %>% 
   # Reassign position by most frequently played position
   mutate(POS = POS[which.max(G)]) %>% 
@@ -49,7 +50,7 @@ data("FieldingOFsplit")
 of_fielding <- FieldingOFsplit %>% 
   group_by(playerID, POS) %>% 
   summarise_if(is.numeric, sum) %>% 
-  # Subset it to only those included in hall of fame data
+  # Subset it to only those included in hof_players
   semi_join(hof_players, by = "playerID") %>% 
   # Update position to most frequently played position
   mutate(POS = POS[which.max(G)]) %>% 
@@ -112,7 +113,6 @@ career_batting <- Batting %>%
   select(-yearID, -stint, -teamID, -lgID) %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
-  semi_join(hof_players, by = "playerID") %>% 
   # Players with substantial amount of batting appearances
   filter(G >= 100, AB >= 500)
 
@@ -130,8 +130,8 @@ hof_batting_stats <- hof_batting_stats %>%
 # Awards for Consideration
 awards <- c("Triple Crown", "Most Valuable Player", "World Series MVP", 
             "Cy Young Award", "Rolaids Relief Man Award", "Gold Glove",
-            "Outstanding DH Award", "Reliever of the Year Award", 
-            "Silver Slugger")
+            "Reliever of the Year Award", "Silver Slugger", 
+            "Pitching Triple Crown")
 
 # Fix Spelling error in the Awards Data
 AwardsPlayers <- AwardsPlayers %>% 
@@ -149,16 +149,36 @@ num_awards <- pivot_wider(data = num_awards,
             id_cols = playerID,
             names_from = awardID,
             values_from = num_awards)
+# Certain awards have limitations
+# Outstanding DH Award is an example as the DH position did not exist
+# in the MLB prior to 1973
+no_DH <- hof_players %>% 
+  mutate(finalGame = as.Date(finalGame)) %>% 
+  filter(year(finalGame) < 1973)
+
 # Add the Award count for each of the batters
 hof_batting_stats <- hof_batting_stats %>% 
-  full_join(num_awards, by = "playerID") %>% 
+  full_join(num_awards, by = "playerID") %>%
+  # Make sure it is only players previously included in batting data
+  filter(playerID %in% batters_fielding$playerID) %>% 
+  # Remove the pitcher related season Awards
   select(-`Rolaids Relief Man Award`, -`Cy Young Award`, 
-         -`Reliever of the Year Award`)
+         -`Reliever of the Year Award`, -`Pitching Triple Crown`) %>% 
+  # Triple Crowns have always been tracked, so if it's missing then the
+  # player never achieved a batting triple crown
+  mutate(`Triple Crown` = ifelse(is.na(`Triple Crown`), 0, `Triple Crown`))
 
 # Add the Award count for each of the pitchers
+# Remove batting awards, we're only concerned with their pitching awards
 hof_pitching_stats <- hof_pitching_stats %>% 
   full_join(num_awards, by = "playerID") %>% 
-  select(-`Triple Crown`,-`Outstanding DH Award`)
+  # Make sure it only includes players from previous batting data
+  filter(playerID %in% pitchers_fielding$playerID) %>% 
+  # Remove batting related season awards
+  select(-`Triple Crown`, -`Silver Slugger`) %>% 
+  # Same logic as for batting triple crown
+  mutate(`Pitching Triple Crown` = ifelse(is.na(`Pitching Triple Crown`), 0, 
+                                                `Pitching Triple Crown`) ) 
 
 # Add major batting milestone indicator variables
 hof_batting_stats <- hof_batting_stats %>% 
@@ -207,13 +227,21 @@ ped_players <- People %>%
 hof_batting_stats <- hof_batting_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
   mutate_if(is.character, as.factor) %>% 
-  filter(!is.na(G))
+  filter(!is.na(G)) # Remove non-batters
 
 # Add ped_use indicator to the pitching stats
 hof_pitching_stats <- hof_pitching_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
   mutate_if(is.character, as.factor) %>% 
-  filter(!is.na(G))
+  filter(!is.na(G))# Remove non-pitchers
 
-missForest(as.data.frame(hof_batting_stats %>% select(-playerID)))
-  
+# get the Active Players for later prediction
+# Active Player = 10 years played, but not 5 years retired
+# For Hall Of Fame eligibility one must have a career length of 10 years
+# and the must have been retired for at least 5 years.
+active_players <- People %>% 
+  anti_join(hof_players, by = "playerID") %>% 
+  mutate(finalGame = as.Date(finalGame),
+         debut = as.Date(debut)) %>% 
+  mutate(length_career = (year(finalGame) - year(debut) ) ) %>% 
+  filter(length_career >= 10 & year(finalGame) >= 2017)
