@@ -1,12 +1,13 @@
 library(Lahman)
 library(tidyverse)
-library(missForest)
 # Load the Hall of Fame ballots data
 data(HallOfFame)
 # Load the Batting Data
 data(Batting)
 # Load the Fielding Data
 data(Fielding)
+# Load the Fielding Splits (Left Field / Center Field / Right Field)
+data(FieldingOFsplit)
 # Load the Pitching Data
 data(Pitching)
 # Load the Player Personal Information
@@ -17,7 +18,8 @@ data(AwardsPlayers)
 # Players who have appeared on the Hall of Fame Ballots
 # and received votes
 hof_players <- HallOfFame %>% 
-  mutate(pct_vote = round((votes / ballots), 4), .after = votes) %>% 
+  mutate(pct_vote = round((votes / ballots), 4), .after = votes) %>%
+  mutate(inducted = ifelse(inducted == "Y", 1, 0)) %>% 
   filter(category == "Player", !is.na(pct_vote))
 
 # Attach the HOF players to their respective Player Information
@@ -32,7 +34,7 @@ batters_fielding <- Fielding %>%
   filter(POS != "P") # Pitchers have separate Data Set, no need to include
 
 # Redefine the numeric variable as Career Position Stats
-batters_fielding <- batters_fielding %>%
+hof_batters_fielding <- batters_fielding %>%
   group_by(playerID, POS) %>%
   summarise_if(is.numeric, sum) %>% 
   # Subset to only the rows with matches in hof_players
@@ -44,10 +46,8 @@ batters_fielding <- batters_fielding %>%
   summarise_if(is.numeric, sum) %>% 
   filter(G >= 175) # Only players with a substantial amount of fielding
 
-# Redefine the outfielder positions for their primary outfield 
-data("FieldingOFsplit")
 # Get the positions Left Field (LF), Center Field (CF), Right Field (RF)
-of_fielding <- FieldingOFsplit %>% 
+hof_of_fielding <- FieldingOFsplit %>% 
   group_by(playerID, POS) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Subset it to only those included in hof_players
@@ -58,9 +58,9 @@ of_fielding <- FieldingOFsplit %>%
   summarise_if(is.numeric, sum) %>% 
   filter(G >= 175)
 
-batters_fielding <- batters_fielding %>% 
+hof_batters_fielding <- hof_batters_fielding %>% 
   # Join together with previous fielding stats
-  left_join(of_fielding, by = "playerID") %>% 
+  left_join(hof_of_fielding, by = "playerID") %>% 
   # Change the position variable to of_fielding$POS
   mutate(POS.x = ifelse(!is.na(POS.y), POS.y, POS.x)) %>% 
   # Remove the variables from of_fielding
@@ -68,13 +68,45 @@ batters_fielding <- batters_fielding %>%
   # Remove ".x" endings from the variables
   rename_with(~gsub("\\.x", "", .), contains(".x"))
 
+# Calculate career Batting Statistics
+career_batting <- Batting %>% 
+  select(-yearID, -stint, -teamID, -lgID) %>% 
+  group_by(playerID) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  # Players with substantial amount of batting appearances
+  filter(G >= 100, AB >= 500)
+
+# Career Stats for Hall of Fame ballot hitters
+hof_batting_stats <- career_batting %>% 
+  semi_join(hof_players, by = "playerID") %>% 
+  # Replace the missing statistics values with 0, since they were
+  # not tracked at the time, or may not have occurred
+  replace_na(list(AB = 0, H = 0, BB = 0, HBP = 0, SH = 0, SF = 0,
+                  SO = 0, X2B = 0, X3B = 0, HR = 0)) %>% 
+  # Add batting rate stats
+  mutate(PA = AB + BB + HBP + SF, # plate appearances
+         BA = H / AB, # batting average
+         `1B` = H - X2B - X3B - HR, # singles
+         SLG = (`1B` + 2 * X2B + 3 * X3B + 4 * HR) / AB, # Slugging %
+         OBP = (H + BB + HBP) / PA, # On Base Percentage
+         OPS = SLG + OBP, # On Base plus Slugging Percentage
+         `SO%` = SO / PA, # Strikeout Percentage
+         `BB%` = BB / PA) # Base-on-Balls (Walk) percentage
+
+# Join together the batting stats with their fielding stats
+hof_batting_stats <- hof_batting_stats %>% 
+  full_join(hof_batters_fielding %>% 
+              select(-G), by = "playerID") %>% 
+  # Excludes the pitchers batting stats, we are not interested in those
+  filter(!is.na(POS))
+
 # Subset Fielding Data to pitchers only
 pitchers_fielding <- Fielding %>% 
   select(-c(2:5), -c(14:18)) %>% 
   filter(POS == "P")
 
 # Hall Of Fame pitchers fielding data
-pitchers_fielding <- pitchers_fielding %>% 
+hof_pitchers_fielding <- pitchers_fielding %>% 
   group_by(playerID) %>% 
   summarise_if(is.numeric, sum) %>% 
   semi_join(hof_players, by = "playerID") %>% 
@@ -90,6 +122,8 @@ career_pitching <- Pitching %>%
   # Calculate career stats for this
   mutate(BAOpp = H / BFP, # Opponent Batting Average
          ERA = ER * 9 / IP, # Earned Run Average
+         `SO%` = SO / BFP, # Strikeout Percentage
+         `BB%` = BB / BFP, # Walk Percentage
          .after = SO) %>% 
   # Differentiate between Starting Pitchers and Relief Pitchers
   mutate(POS = ifelse(GS / G >= 0.7, "SP", "RP"),
@@ -103,29 +137,10 @@ hof_pitching_stats <- career_pitching %>%
 
 # Join together the pitching stats with their fielding stats
 hof_pitching_stats <- hof_pitching_stats %>% 
-  full_join(pitchers_fielding %>% 
+  full_join(hof_pitchers_fielding %>% 
               select(-G, -GS), by = "playerID") %>% 
   # Removes players who are not primarily pitchers
   filter(!is.na(POS)) 
-
-# Calculate career Batting Statistics
-career_batting <- Batting %>% 
-  select(-yearID, -stint, -teamID, -lgID) %>% 
-  group_by(playerID) %>% 
-  summarise_if(is.numeric, sum) %>% 
-  # Players with substantial amount of batting appearances
-  filter(G >= 100, AB >= 500)
-
-# Career Stats for Hall of Fame ballot hitters
-hof_batting_stats <- career_batting %>% 
-  semi_join(hof_players, by = "playerID")
-
-# Join together the batting stats with their fielding stats
-hof_batting_stats <- hof_batting_stats %>% 
-  full_join(batters_fielding %>% 
-              select(-G), by = "playerID") %>% 
-  # Excludes the pitchers batting stats, we are not interested in those
-  filter(!is.na(POS))
 
 # Awards for Consideration
 awards <- c("Triple Crown", "Most Valuable Player", "World Series MVP", 
@@ -149,18 +164,12 @@ num_awards <- pivot_wider(data = num_awards,
             id_cols = playerID,
             names_from = awardID,
             values_from = num_awards)
-# Certain awards have limitations
-# Outstanding DH Award is an example as the DH position did not exist
-# in the MLB prior to 1973
-no_DH <- hof_players %>% 
-  mutate(finalGame = as.Date(finalGame)) %>% 
-  filter(year(finalGame) < 1973)
 
 # Add the Award count for each of the batters
 hof_batting_stats <- hof_batting_stats %>% 
   full_join(num_awards, by = "playerID") %>%
   # Make sure it is only players previously included in batting data
-  filter(playerID %in% batters_fielding$playerID) %>% 
+  filter(playerID %in% hof_batters_fielding$playerID) %>% 
   # Remove the pitcher related season Awards
   select(-`Rolaids Relief Man Award`, -`Cy Young Award`, 
          -`Reliever of the Year Award`, -`Pitching Triple Crown`) %>% 
@@ -173,7 +182,7 @@ hof_batting_stats <- hof_batting_stats %>%
 hof_pitching_stats <- hof_pitching_stats %>% 
   full_join(num_awards, by = "playerID") %>% 
   # Make sure it only includes players from previous batting data
-  filter(playerID %in% pitchers_fielding$playerID) %>% 
+  filter(playerID %in% hof_pitchers_fielding$playerID) %>% 
   # Remove batting related season awards
   select(-`Triple Crown`, -`Silver Slugger`) %>% 
   # Same logic as for batting triple crown
@@ -183,13 +192,13 @@ hof_pitching_stats <- hof_pitching_stats %>%
 # Add major batting milestone indicator variables
 hof_batting_stats <- hof_batting_stats %>% 
   mutate(`500_hr` = ifelse(HR >= 500, "Yes", "No"),
-         `3000_hit` = ifelse(H >= 3000, "Yes", "No")) 
+         `3000_hit` = ifelse(H >= 3000, "Yes", "No") )
 
 # Add major pitching milestone indicator variables
 hof_pitching_stats <- hof_pitching_stats %>% 
   mutate(`300_wins` = ifelse(W >= 300, "Yes", "No"),
          `3000_so` = ifelse(SO >= 3000, "Yes", "No"),
-         `300_sv` = ifelse(SV >= 300, "Yes", "No"))
+         `300_sv` = ifelse(SV >= 300, "Yes", "No") )
 
 # Character vector of players accused/caught using Performance Enhancing Drugs
 # (PEDs)
@@ -235,6 +244,18 @@ hof_pitching_stats <- hof_pitching_stats %>%
   mutate_if(is.character, as.factor) %>% 
   filter(!is.na(G))# Remove non-pitchers
 
+hof_induction <- hof_players %>% 
+  select(playerID, inducted) %>% 
+  group_by(playerID) %>% 
+  summarise(inducted = sum(inducted))
+# Add the batter's Hall of Fame Induction status
+hof_batting_stats <- hof_batting_stats %>% 
+  inner_join(hof_induction, by = "playerID") %>% 
+  relocate(inducted, .before = G)
+# Add the Pitcher's Hall of Fame Induction Status
+hof_pitching_stats <- hof_pitching_stats %>% 
+  inner_join(hof_induction, by = "playerID") %>% 
+  relocate(inducted, .before = G)
 # get the Active Players for later prediction
 # Active Player = 10 years played, but not 5 years retired
 # For Hall Of Fame eligibility one must have a career length of 10 years
@@ -245,3 +266,126 @@ active_players <- People %>%
          debut = as.Date(debut)) %>% 
   mutate(length_career = (year(finalGame) - year(debut) ) ) %>% 
   filter(length_career >= 10 & year(finalGame) >= 2017)
+
+active_batters_fielding <- batters_fielding %>% 
+  group_by(playerID, POS) %>%
+  summarise_if(is.numeric, sum) %>% 
+  # Subset to only the rows with matches in active_players
+  semi_join(active_players, by = "playerID") %>% 
+  # Reassign position by most frequently played position
+  mutate(POS = POS[which.max(G)]) %>% 
+  group_by(playerID, POS) %>% 
+  # Career totals of the fielding data
+  summarise_if(is.numeric, sum) %>% 
+  filter(G >= 175) # Only players with a substantial amount of fielding
+
+active_of_fielding <- FieldingOFsplit %>% 
+  group_by(playerID, POS) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  # Subset it to only those included in hof_players
+  semi_join(active_players, by = "playerID") %>% 
+  # Update position to most frequently played position
+  mutate(POS = POS[which.max(G)]) %>% 
+  group_by(playerID, POS) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  filter(G >= 175) 
+
+active_batters_fielding <- active_batters_fielding %>% 
+  # Join together with previous fielding stats
+  left_join(active_of_fielding, by = "playerID") %>% 
+  mutate(POS.x = ifelse(!is.na(POS.y), POS.y, POS.x)) %>% 
+  # Remove the variables from active_of_fielding
+  select(-c(POS.y:DP.y)) %>% 
+  # Remove ".x" endings from the variables
+  rename_with(~gsub("\\.x", "", .), contains(".x"))
+
+# Career Stats for Hall of Fame ballot hitters
+active_batting_stats <- career_batting %>% 
+  semi_join(active_players, by = "playerID") %>% 
+  # Replace the missing statistics values with 0, since they were
+  # not tracked at the time, or may not have occurred
+  replace_na(list(AB = 0, H = 0, BB = 0, HBP = 0, SH = 0, SF = 0,
+                  SO = 0, X2B = 0, X3B = 0, HR = 0)) %>% 
+  # Add batting rate stats
+  mutate(PA = AB + BB + HBP + SF, # plate appearances
+         BA = H / AB, # batting average
+         `1B` = H - X2B - X3B - HR, # singles
+         SLG = (`1B` + 2 * X2B + 3 * X3B + 4 * HR) / AB, # Slugging %
+         OBP = (H + BB + HBP) / PA, # On Base Percentage
+         OPS = SLG + OBP, # On Base plus Slugging Percentage
+         `SO%` = SO / PA, # Strikeout Percentage
+         `BB%` = BB / PA) # Base-on-Balls (Walk) percentage
+
+# Join together the batting stats with their fielding stats
+active_batting_stats <- active_batting_stats %>% 
+  full_join(active_batters_fielding %>% 
+              select(-G), by = "playerID") %>% 
+  # Excludes the pitchers batting stats, we are not interested in those
+  filter(!is.na(POS))
+
+active_pitchers_fielding <- pitchers_fielding %>% 
+  group_by(playerID) %>% 
+  summarise_if(is.numeric, sum) %>% 
+  semi_join(active_players, by = "playerID") %>% 
+  filter(G >= 40)
+
+# Pitching stats for the Hall of Fame players
+active_pitching_stats <- career_pitching %>% 
+  semi_join(active_players, by = "playerID")
+
+# Join together the pitching stats with their fielding stats
+active_pitching_stats <- active_pitching_stats %>% 
+  full_join(active_pitchers_fielding %>% 
+              select(-G, -GS), by = "playerID") %>% 
+  # Removes players who are not primarily pitchers
+  filter(!is.na(POS)) 
+
+# Add the Award count for each of the batters
+active_batting_stats <- active_batting_stats %>% 
+  full_join(num_awards, by = "playerID") %>%
+  # Make sure it is only players previously included in batting data
+  filter(playerID %in% active_batters_fielding$playerID) %>% 
+  # Remove the pitcher related season Awards
+  select(-`Rolaids Relief Man Award`, -`Cy Young Award`, 
+         -`Reliever of the Year Award`, -`Pitching Triple Crown`) %>% 
+  replace(is.na(.), 0)
+
+# Add the Award count for each of the pitchers
+# Remove batting awards, we're only concerned with their pitching awards
+active_pitching_stats <- active_pitching_stats %>% 
+  full_join(num_awards, by = "playerID") %>% 
+  # Make sure it only includes players from previous batting data
+  filter(playerID %in% active_pitchers_fielding$playerID) %>% 
+  # Remove batting related season awards
+  select(-`Triple Crown`, -`Silver Slugger`) %>% 
+  # Replace NA Values in the data, only award columns
+  replace(is.na(.), 0)
+
+# Add major batting milestone indicator variables
+active_batting_stats <- active_batting_stats %>% 
+  mutate(`500_hr` = ifelse(HR >= 500, "Yes", "No"),
+         `3000_hit` = ifelse(H >= 3000, "Yes", "No") )
+
+# Add major pitching milestone indicator variables
+active_pitching_stats <- active_pitching_stats %>% 
+  mutate(`300_wins` = ifelse(W >= 300, "Yes", "No"),
+         `3000_so` = ifelse(SO >= 3000, "Yes", "No"),
+         `300_sv` = ifelse(SV >= 300, "Yes", "No") )
+
+# Add ped_use indicator to the batting stats
+active_batting_stats <- active_batting_stats %>% 
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
+  mutate_if(is.character, as.factor)
+
+# Add ped_use indicator to the pitching stats
+active_pitching_stats <- active_pitching_stats %>% 
+  mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No")) %>% 
+  mutate_if(is.character, as.factor)
+
+# Remove the variables for sourcing the file for model purposes
+rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding,
+   active_pitchers_fielding, active_players, batters_fielding, career_batting,
+   career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
+   hof_of_fielding, hof_induction, hof_pitchers_fielding, hof_players,
+   num_awards, of_fielding, ped_players, People, pitchers_fielding, Pitching,
+   awards, ped_use)
