@@ -391,7 +391,7 @@ active_pitching_stats <- active_pitching_stats %>%
 active_batting_stats <- active_batting_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Triple Crown` = as.factor(`Triple Crown`),
-         inducted = c(NA),
+         inducted = c(0),
          play_era = "Modern") %>% 
   mutate_if(is.character, as.factor) %>% 
   mutate(Range = (PO + A) / G, .after = `BB:SO`) %>% 
@@ -402,7 +402,7 @@ active_batting_stats <- active_batting_stats %>%
 active_pitching_stats <- active_pitching_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Pitching Triple Crown` = as.factor(`Pitching Triple Crown`),
-         inducted = c(NA),
+         inducted = c(0),
          play_era = "Modern") %>% 
   mutate_if(is.character, as.factor)
 
