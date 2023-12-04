@@ -8,6 +8,7 @@ library(randomForest) # For Random Forest
 library(xgboost) # For boosted trees
 library(doParallel) # For parallel processing
 library(caret) # For diagnostics of models
+library(vip) # For variable importance
 
 # Split the Hall of Fame data for batters into a training and testing
 # set
@@ -20,15 +21,15 @@ batters_testing <- testing(data_split)
 # Random Forest Model for Hall of Fame batters
 rf_batters_model <- 
   rand_forest(trees = tune(),
-                      mtry = tune(),
-                      min_n = tune()) %>% 
-  set_engine("ranger") %>% 
+              mtry = tune(),
+              min_n = tune()) %>% 
+  set_engine("ranger", importance = "impurity") %>% 
   set_mode("classification")
 
 # Random Forest recipe for Hall of Fame Batters
 rf_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, GS, InnOuts) %>% 
+  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, GS, InnOuts, E) %>% 
   step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
@@ -128,6 +129,13 @@ rf_future_hof <- active_batting_stats %>%
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
 
+# Feature importance for Random Forest Model
+rf_batters_feature_imp <- 
+  rf_batters_fit %>% 
+  extract_fit_parsnip() %>% 
+  vip(geom = "point") +
+  labs(title = "Batter's Random Forest variable importance")
+
 # Gradient Boosted model for Hall of Fame Batters
 boost_batters_model <- 
   boost_tree(
@@ -146,7 +154,7 @@ boost_batters_model <-
 # Boosted tree for batters recipe
 boost_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_rm(playerID, GS, InnOuts, SH, SF, GIDP) %>% 
+  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, E) %>% 
   step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
@@ -250,3 +258,10 @@ boost_future_hof <- active_batting_stats %>%
   semi_join(boost_future_hof, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
+
+# Feature imporance for the Boosted Model
+boost_batters_feature_imp <- 
+  boost_batters_fit %>% 
+  extract_fit_parsnip() %>% 
+  vip(geom = "point") +
+  labs(title = "Batter's Random Forest variable importance")
