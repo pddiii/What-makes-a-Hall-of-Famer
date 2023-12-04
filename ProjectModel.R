@@ -49,7 +49,7 @@ rf_grid <- grid_latin_hypercube(
   trees(range = c(25, 150)),
   mtry(range = c(5, 25)),
   min_n(range = c(5, 15)),
-  size = 100
+  size = 500
 )
 
 registerDoParallel(cores = detectCores())
@@ -154,7 +154,7 @@ boost_grid <- grid_latin_hypercube(
   tree_depth(range = c(5, 15)),
   learn_rate(),
   loss_reduction(),
-  size = 250
+  size = 500
 )
 
 registerDoParallel(cores = detectCores())
