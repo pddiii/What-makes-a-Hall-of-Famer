@@ -249,13 +249,16 @@ hof_pitching_stats <- hof_pitching_stats %>%
 hof_induction <- hof_players %>% 
   select(playerID, inducted, play_era) %>% 
   group_by(playerID) %>% 
+  summarise(inducted = sum(inducted), play_era = first(play_era)) %>% 
   mutate(inducted = as.factor(inducted))
+  
 # Add the batter's Hall of Fame Induction status
 hof_batting_stats <- hof_batting_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
   distinct(playerID, .keep_all = TRUE) %>% 
   relocate(c(inducted, play_era), .before = G) %>% 
   relocate(POS, .after = playerID)
+
 # Add the Pitcher's Hall of Fame Induction Status
 hof_pitching_stats <- hof_pitching_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
