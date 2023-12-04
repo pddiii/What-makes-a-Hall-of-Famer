@@ -40,12 +40,13 @@ hof_players <- hof_players %>%
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to batters only
 batters_fielding <- Fielding %>% 
-  select(-c(2:5, 14:18)) %>% 
-  filter(POS != "P") # Pitchers have separate Data Set, no need to include
+  select(-c(2:5)) %>% 
+  filter(POS != "P") %>% # Pitchers have separate Data Set, no need to include
+  replace(is.na(.), 0) 
 
 # Redefine the numeric variable as Career Position Stats
 hof_batters_fielding <- batters_fielding %>%
-  group_by(playerID, POS) %>%
+  group_by(playerID, POS) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Subset to only the rows with matches in hof_players
   semi_join(hof_players, by = "playerID") %>% 
@@ -257,7 +258,8 @@ hof_batting_stats <- hof_batting_stats %>%
   inner_join(hof_induction, by = "playerID") %>% 
   distinct(playerID, .keep_all = TRUE) %>% 
   relocate(c(inducted, play_era), .before = G) %>% 
-  relocate(POS, .after = playerID)
+  relocate(POS, .after = playerID) %>% 
+  rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y)
 
 # Add the Pitcher's Hall of Fame Induction Status
 hof_pitching_stats <- hof_pitching_stats %>% 
@@ -386,7 +388,9 @@ active_batting_stats <- active_batting_stats %>%
          inducted = c(NA),
          play_era = "Modern") %>% 
   mutate_if(is.character, as.factor) %>% 
-  mutate(Range = (PO + A) / G, .after = `BB:SO`)
+  mutate(Range = (PO + A) / G, .after = `BB:SO`) %>% 
+  rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y) %>% 
+  mutate(PB = ifelse(POS == "C", PB, 0))
 
 # Add ped_use indicator to the pitching stats
 active_pitching_stats <- active_pitching_stats %>% 
