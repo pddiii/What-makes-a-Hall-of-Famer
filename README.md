@@ -8,6 +8,7 @@ MLB Hall of Fame Status Prediction Model
 | Variable Name | Description | Data Type | Calculation |
 | ------------- | ----------- | --------- | ----------- |
 | playerID | player ID from Baseball-Reference.com | Character | N/A |
+| G | Total Games played in Career | Numeric | N/A |
 
 ## Batters Variables
 
