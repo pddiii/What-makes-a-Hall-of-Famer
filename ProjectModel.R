@@ -156,22 +156,26 @@ rf_pitchers_crossval <-
 rf_pitchers_crossval %>% 
   collect_metrics()
 
+# Final fit
 set.seed(1)
 rf_pitchers_fit <- 
   rf_pitchers_wf %>% 
   fit(data = pitchers_training)
 
+#RF predictions with testing set
 rf_pitchers_prediction <- 
   rf_pitchers_fit %>% 
   predict(pitchers_testing) %>% 
   cbind(pitchers_testing %>% select(playerID))
 
+# Accuracy of the Random Forest Predictions
+confusionMatrix(table(rf_pitchers_prediction$.pred_class, pitchers_testing$inducted))
+
+## Prediction of current player to make Hall of Fame
 active_pitchers_prediction <-
   rf_pitchers_fit %>% 
   predict(active_pitching_stats) %>% 
   cbind(active_pitching_stats %>% select(playerID))
-
-## Prediction of current player to make Hall of Fame
 
 active_pitchers_prediction %>%
   filter(.pred_class == 1) %>%
