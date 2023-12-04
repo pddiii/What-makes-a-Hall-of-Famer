@@ -20,22 +20,40 @@ data(AwardsPlayers)
 hof_players <- HallOfFame %>% 
   mutate(pct_vote = round((votes / ballots), 4), .after = votes) %>%
   mutate(inducted = ifelse(inducted == "Y", 1, 0)) %>% 
-  filter(category == "Player", !is.na(pct_vote))
+  filter(category == "Player")
 
 # Attach the HOF players to their respective Player Information
 hof_players <- hof_players %>% 
   inner_join(People, by = "playerID") %>% 
-  select(-c(11:22), -deathDate, -birthDate)
+  select(-c(11:22), -deathDate, -birthDate) %>% 
+  # Add indicator variable play_era to distinguish time frames of MLB play
+  mutate(debut = year(as.Date(debut)),
+         finalGame = year(as.Date(finalGame)),
+         play_era = ifelse(finalGame < 1920, "Dead Ball", 
+                    ifelse(finalGame >= 1920 & finalGame < 1941, "Live Ball", 
+                    ifelse(finalGame >= 1941 & finalGame < 1961, "Integration",
+                    ifelse(finalGame >= 1961 & finalGame < 1977, "Expansion",
+                    ifelse(finalGame >= 1977 & finalGame < 1994, "Free Agency",
+                    ifelse(finalGame >= 1994 & finalGame < 2006, "Steroids",
+                              "Modern") ) ) ) ) )) %>% 
+  # Fix incorrect play_eras for batters
+  mutate(play_era = ifelse(playerID %in% c("bondsba01", "griffke02", "thomeji01",
+                                           "sosasa01", "thomasfr04", "sheffga01",
+                                           "delgaca01", "jonesch06", "giambja01",
+                                           "jonesan01", "piazzami01"), 
+                           "Steroids", play_era),
+         play_era = as.factor(play_era))
 
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to batters only
 batters_fielding <- Fielding %>% 
-  select(-c(2:5, 14:18)) %>% 
-  filter(POS != "P") # Pitchers have separate Data Set, no need to include
+  select(-c(2:5)) %>% 
+  filter(POS != "P") %>% # Pitchers have separate Data Set, no need to include
+  replace(is.na(.), 0) 
 
 # Redefine the numeric variable as Career Position Stats
 hof_batters_fielding <- batters_fielding %>%
-  group_by(playerID, POS) %>%
+  group_by(playerID, POS) %>% 
   summarise_if(is.numeric, sum) %>% 
   # Subset to only the rows with matches in hof_players
   semi_join(hof_players, by = "playerID") %>% 
@@ -97,6 +115,7 @@ hof_batting_stats <- hof_batting_stats %>%
          `BB%` = BB / PA, # Base-on-Balls (Walk) percentage
          `BB:SO` = BB / SO, # Walk to Strikeout Ratio
          Range = (A + PO) / G )   # Range Factor for fielders 
+
 # Subset Fielding Data to pitchers only
 pitchers_fielding <- Fielding %>% 
   select(-c(2:5), -c(14:18)) %>% 
@@ -151,9 +170,9 @@ num_awards <- AwardsPlayers %>%
 
 # Pivot the data longer for easier formatting to add variables to the data.  
 num_awards <- pivot_wider(data = num_awards,
-            id_cols = playerID,
-            names_from = awardID,
-            values_from = num_awards)
+                          id_cols = playerID,
+                          names_from = awardID,
+                          values_from = num_awards)
 
 # Add the Award count for each of the batters
 hof_batting_stats <- hof_batting_stats %>% 
@@ -177,38 +196,41 @@ hof_pitching_stats <- hof_pitching_stats %>%
   select(-`Triple Crown`) %>%
   # Same logic as for batting triple crown
   mutate(`Pitching Triple Crown` = as.factor(ifelse(
-                                  is.na(`Pitching Triple Crown`),
-                                  0, `Pitching Triple Crown`
-                                  ) ) )
+    is.na(`Pitching Triple Crown`),
+    0, `Pitching Triple Crown`
+  ) ) )
 
 # Add major batting milestone indicator variables
 hof_batting_stats <- hof_batting_stats %>% 
   mutate(`500_hr` = ifelse(HR >= 500, "Yes", "No"),
-         `3000_hit` = ifelse(H >= 3000, "Yes", "No") )
+         `3000_hit` = ifelse(H >= 3000, "Yes", "No"),
+         `1500_runs` = ifelse(R >= 1500, "Yes", "No"),
+         `1500_rbi` = ifelse(RBI >= 1500, "Yes", "No"),
+         `2500_G` = ifelse(G >= 2500, "Yes", "No"))
 
 # Add major pitching milestone indicator variables
 hof_pitching_stats <- hof_pitching_stats %>% 
   mutate(`300_wins` = ifelse(W >= 300, "Yes", "No"),
          `3000_so` = ifelse(SO >= 3000, "Yes", "No"),
-         `300_sv` = ifelse(SV >= 300, "Yes", "No") )
+         `300_sv` = ifelse(SV >= 300, "Yes", "No"))
 
 # Character vector of players accused/caught using Performance Enhancing Drugs
 # (PEDs)
 ped_use <- c("Rafael Palmeiro", "Manny Ramirez", "Alex Rodriguez", "Barry Bonds", 
-"Mark McGwire", "Roger Clemens", "Jose Canseco", "Bartolo Colon", "Nelson Cruz",
-"Ryan Braun", "Miguel Tejada", "Melky Cabrera", "Yasmani Grandal", 
-"Antonio Bastardo", "Francisco Cervelli", "Cameron Maybin", "Troy Patton", 
-"Chris Davis", "David Rollins", "Ervin Santana", 
-"Andrew McKirahan", "Cody Stanley", "Abraham Almonte", "Daniel Stumpf", 
-"Chris Colabello", "Dee Strange-Gordon", "Josh Ravin", "Adalberto Mondesi", 
-"Alec Asher",
-"Starling Marte", "David Paulino", "Jorge Bonifacio", "Jorge Polanco", 
-"Robinson Cano", "Welington Castillo", "Steven Wright", "Francis Martes", 
-"Frankie Montas", "Tim Beckham", "Michael Pineda", "Paul Campbell", 
-"Gregory Santos", "Hector Santiago", "Ramon Laureano", "Pedro Severino", 
-"Jenrry Mejia", "Fernando Tatis", "Jason Giambi", "David Ortiz", 
-"Ivan Rodriguez", "Gary Sheffield", "Sammy Sosa", "Juan Gonzalez", 
-"Mike Piazza", "Jeff Bagwell")
+             "Mark McGwire", "Roger Clemens", "Jose Canseco", "Bartolo Colon", "Nelson Cruz",
+             "Ryan Braun", "Miguel Tejada", "Melky Cabrera", "Yasmani Grandal", 
+             "Antonio Bastardo", "Francisco Cervelli", "Cameron Maybin", "Troy Patton", 
+             "Chris Davis", "David Rollins", "Ervin Santana", 
+             "Andrew McKirahan", "Cody Stanley", "Abraham Almonte", "Daniel Stumpf", 
+             "Chris Colabello", "Dee Strange-Gordon", "Josh Ravin", "Adalberto Mondesi", 
+             "Alec Asher",
+             "Starling Marte", "David Paulino", "Jorge Bonifacio", "Jorge Polanco", 
+             "Robinson Cano", "Welington Castillo", "Steven Wright", "Francis Martes", 
+             "Frankie Montas", "Tim Beckham", "Michael Pineda", "Paul Campbell", 
+             "Gregory Santos", "Hector Santiago", "Ramon Laureano", "Pedro Severino", 
+             "Jenrry Mejia", "Fernando Tatis", "Jason Giambi", "David Ortiz", 
+             "Ivan Rodriguez", "Gary Sheffield", "Sammy Sosa", "Juan Gonzalez", 
+             "Mike Piazza", "Jeff Bagwell")
 
 # Getting the player information (particularly player ids) for these PED
 # players
@@ -237,19 +259,24 @@ hof_pitching_stats <- hof_pitching_stats %>%
   filter(!is.na(G))# Remove non-pitchers
 
 hof_induction <- hof_players %>% 
-  select(playerID, inducted) %>% 
-  group_by(playerID) %>% 
-  summarise(inducted = sum(inducted)) %>% 
+  select(playerID, inducted, play_era) %>% 
+  group_by(playerID) %>%
+  summarise(inducted = sum(inducted), play_era = first(play_era)) %>% 
   mutate(inducted = as.factor(inducted))
+
 # Add the batter's Hall of Fame Induction status
 hof_batting_stats <- hof_batting_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
-  relocate(inducted, .before = G) %>% 
-  relocate(POS, .after = playerID)
+  distinct(playerID, .keep_all = TRUE) %>% 
+  relocate(c(inducted, play_era), .before = G) %>% 
+  relocate(POS, .after = playerID) %>% 
+  rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y)
+
 # Add the Pitcher's Hall of Fame Induction Status
 hof_pitching_stats <- hof_pitching_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
-  relocate(inducted, .before = G)
+  distinct(playerID, .keep_all = TRUE) %>% 
+  relocate(c(inducted, play_era), .before = G)
 
 # get the Active Players for later prediction
 # Active Player = 10 years played, but not 5 years retired
@@ -357,7 +384,10 @@ active_pitching_stats <- active_pitching_stats %>%
 # Add major batting milestone indicator variables
 active_batting_stats <- active_batting_stats %>% 
   mutate(`500_hr` = ifelse(HR >= 500, "Yes", "No"),
-         `3000_hit` = ifelse(H >= 3000, "Yes", "No") )
+         `3000_hit` = ifelse(H >= 3000, "Yes", "No"),
+         `1500_runs` = ifelse(R >= 1500, "Yes", "No"),
+         `1500_rbi` = ifelse(RBI >= 1500, "Yes", "No"),
+         `2500_G` = ifelse(G >= 2500, "Yes", "No"))
 
 # Add major pitching milestone indicator variables
 active_pitching_stats <- active_pitching_stats %>% 
@@ -369,21 +399,26 @@ active_pitching_stats <- active_pitching_stats %>%
 active_batting_stats <- active_batting_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Triple Crown` = as.factor(`Triple Crown`),
-         inducted = c(NA)) %>% 
-  mutate_if(is.character, as.factor)
-  mutate(Range = (PO + A) / G, .after = `BB:SO`)
+         inducted = c(0),
+         play_era = "Modern") %>% 
+  mutate_if(is.character, as.factor) %>% 
+  mutate(Range = (PO + A) / G, .after = `BB:SO`) %>% 
+  rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y) %>% 
+  mutate(PB = ifelse(POS == "C", PB, 0)) %>% 
+  filter(playerID != "petitgr01")
 
 # Add ped_use indicator to the pitching stats
 active_pitching_stats <- active_pitching_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Pitching Triple Crown` = as.factor(`Pitching Triple Crown`),
-         inducted = c(NA)) %>% 
+         inducted = c(0),
+         play_era = "Modern") %>% 
   mutate_if(is.character, as.factor)
 
 # Remove the variables for sourcing the file for model purposes
 rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding,
    active_pitchers_fielding, active_players, batters_fielding, career_batting,
    career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
-   hof_of_fielding, hof_induction, hof_pitchers_fielding, hof_players,
-   num_awards, ped_players, People, pitchers_fielding, Pitching,
+   hof_of_fielding, hof_induction, hof_pitchers_fielding, 
+   num_awards, ped_players, pitchers_fielding, Pitching,
    awards, ped_use)
