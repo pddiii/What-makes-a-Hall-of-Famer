@@ -6,6 +6,7 @@ MLB Hall of Fame Status Prediction Model
 ## General Variables (Features in both datasets)
 
 | Variable Name | Description | Data Type | Calculation |
+| ------------- | ----------- | --------- | ----------- |
 | playerID | player ID from Baseball-Reference.com | Character | N/A |
 
 ## Batters Variables
