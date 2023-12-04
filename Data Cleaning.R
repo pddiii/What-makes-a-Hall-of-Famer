@@ -198,7 +198,7 @@ hof_batting_stats <- hof_batting_stats %>%
          `3000_hit` = ifelse(H >= 3000, "Yes", "No"),
          `1500_runs` = ifelse(R >= 1500, "Yes", "No"),
          `1500_rbi` = ifelse(RBI >= 1500, "Yes", "No"),
-         `2500_gp` = ifelse(GP >= 2500, "Yes", "No"))
+         `2500_G` = ifelse(G >= 2500, "Yes", "No"))
 
 # Add major pitching milestone indicator variables
 hof_pitching_stats <- hof_pitching_stats %>% 
@@ -379,7 +379,7 @@ active_batting_stats <- active_batting_stats %>%
          `3000_hit` = ifelse(H >= 3000, "Yes", "No"),
          `1500_runs` = ifelse(R >= 1500, "Yes", "No"),
          `1500_rbi` = ifelse(RBI >= 1500, "Yes", "No"),
-         `2500_gp` = ifelse(GP >= 2500, "Yes", "No"))
+         `2500_G` = ifelse(G >= 2500, "Yes", "No"))
 
 # Add major pitching milestone indicator variables
 active_pitching_stats <- active_pitching_stats %>% 
