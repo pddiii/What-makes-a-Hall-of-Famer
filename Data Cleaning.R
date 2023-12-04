@@ -29,13 +29,20 @@ hof_players <- hof_players %>%
   # Add indicator variable play_era to distinguish time frames of MLB play
   mutate(debut = year(as.Date(debut)),
          finalGame = year(as.Date(finalGame)),
-         play_era = as.factor(ifelse(finalGame < 1920, "Dead Ball", 
+         play_era = ifelse(finalGame < 1920, "Dead Ball", 
                     ifelse(finalGame >= 1920 & finalGame < 1941, "Live Ball", 
                     ifelse(finalGame >= 1941 & finalGame < 1961, "Integration",
                     ifelse(finalGame >= 1961 & finalGame < 1977, "Expansion",
                     ifelse(finalGame >= 1977 & finalGame < 1994, "Free Agency",
                     ifelse(finalGame >= 1994 & finalGame < 2006, "Steroids",
-                              "Modern") ) ) ) ) )) )
+                              "Modern") ) ) ) ) )) %>% 
+  # Fix incorrect play_eras for batters
+  mutate(play_era = ifelse(playerID %in% c("bondsba01", "griffke02", "thomeji01",
+                                           "sosasa01", "thomasfr04", "sheffga01",
+                                           "delgaca01", "jonesch06", "giambja01",
+                                           "jonesan01", "piazzami01"), 
+                           "Steroids", play_era),
+         play_era = as.factor(play_era))
 
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to batters only
@@ -263,13 +270,7 @@ hof_batting_stats <- hof_batting_stats %>%
   distinct(playerID, .keep_all = TRUE) %>% 
   relocate(c(inducted, play_era), .before = G) %>% 
   relocate(POS, .after = playerID) %>% 
-  rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y) %>% 
-  # Fix incorrect play_eras for batters
-  mutate(play_era = ifelse(playerID %in% c("bondsba01", "griffke02", "thomeji01",
-                                           "sosasa01", "thomasfr04", "sheffga01",
-                                           "delgaca01", "jonesch06", "giambja01",
-                                           "jonesan01", "piazzami01"), 
-                           "Steroids", play_era) )
+  rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y)
 
 # Add the Pitcher's Hall of Fame Induction Status
 hof_pitching_stats <- hof_pitching_stats %>% 
