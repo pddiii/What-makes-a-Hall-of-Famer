@@ -35,7 +35,7 @@ hof_players <- hof_players %>%
                ifelse(finalGame >= 1961 & finalGame < 1977, "Expansion",
                ifelse(finalGame >= 1977 & finalGame < 1994, "Free Agency",
                ifelse(finalGame >= 1994 & finalGame < 2006, "Steroids",
-                      "Modern Era") ) ) ) ) )) )
+                      "Modern") ) ) ) ) )) )
 
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to batters only
@@ -247,19 +247,18 @@ hof_pitching_stats <- hof_pitching_stats %>%
   filter(!is.na(G))# Remove non-pitchers
 
 hof_induction <- hof_players %>% 
-  select(playerID, inducted) %>% 
+  select(playerID, inducted, play_era) %>% 
   group_by(playerID) %>% 
-  summarise(inducted = sum(inducted)) %>% 
   mutate(inducted = as.factor(inducted))
 # Add the batter's Hall of Fame Induction status
 hof_batting_stats <- hof_batting_stats %>% 
-  inner_join(hof_induction, by = "playerID") %>% 
-  relocate(inducted, .before = G) %>% 
+  inner_join(hof_induction, by = "playerID") %>%  
+  relocate(c(inducted, play_era), .before = G) %>% 
   relocate(POS, .after = playerID)
 # Add the Pitcher's Hall of Fame Induction Status
 hof_pitching_stats <- hof_pitching_stats %>% 
   inner_join(hof_induction, by = "playerID") %>% 
-  relocate(inducted, .before = G)
+  relocate(c(inducted, play_era), .before = G)
 
 # get the Active Players for later prediction
 # Active Player = 10 years played, but not 5 years retired
@@ -379,7 +378,8 @@ active_pitching_stats <- active_pitching_stats %>%
 active_batting_stats <- active_batting_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Triple Crown` = as.factor(`Triple Crown`),
-         inducted = c(NA)) %>% 
+         inducted = c(NA),
+         play_era = "Modern") %>% 
   mutate_if(is.character, as.factor) %>% 
   mutate(Range = (PO + A) / G, .after = `BB:SO`)
 
@@ -387,7 +387,8 @@ active_batting_stats <- active_batting_stats %>%
 active_pitching_stats <- active_pitching_stats %>% 
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Pitching Triple Crown` = as.factor(`Pitching Triple Crown`),
-         inducted = c(NA)) %>% 
+         inducted = c(NA),
+         play_era = "Modern") %>% 
   mutate_if(is.character, as.factor)
 
 # Remove the variables for sourcing the file for model purposes
