@@ -419,6 +419,6 @@ active_pitching_stats <- active_pitching_stats %>%
 rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding,
    active_pitchers_fielding, active_players, batters_fielding, career_batting,
    career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
-   hof_of_fielding, hof_induction, hof_pitchers_fielding, hof_players,
-   num_awards, ped_players, People, pitchers_fielding, Pitching,
+   hof_of_fielding, hof_induction, hof_pitchers_fielding, 
+   num_awards, ped_players, pitchers_fielding, Pitching,
    awards, ped_use)
