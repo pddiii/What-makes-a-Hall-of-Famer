@@ -422,3 +422,18 @@ rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding
    hof_of_fielding, hof_induction, hof_pitchers_fielding, 
    num_awards, ped_players, pitchers_fielding, Pitching,
    awards, ped_use)
+
+
+## Create .csv files for the batting and pitching data sets
+
+#  Hall of Fame batting
+# write.csv(hof_batting_stats, file = "hof_batting.csv")
+# 
+#  Hall of Fame Pitching
+# write.csv(hof_pitching_stats, file = "hof_pitching.csv")
+# 
+#  Active Batting
+# write.csv(active_batting_stats, file = "active_batting.csv")
+# 
+#  Active Pitching
+# write.csv(active_pitching_stats, file = "active_pitching.")
