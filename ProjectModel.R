@@ -209,5 +209,11 @@ bt_active_pitchers_prediction %>%
   inner_join(People, by = "playerID") %>%
   select(nameFirst, nameLast)
 
-#Still figuring out feature importance for boosted tree
-# xgb.importance(model = bt_pitchers_model)
+# Boosted Tree Feature Importance
+bt_pitchers_feature_import <- 
+  bt_pitchers_fit %>% 
+  extract_fit_parsnip() %>% 
+  vip(geom = "point") +
+  labs(title = "Boosted Tree variable importance")
+
+bt_pitchers_feature_import
