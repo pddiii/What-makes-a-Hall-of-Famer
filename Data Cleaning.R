@@ -133,6 +133,7 @@ career_pitching <- Pitching %>%
          `SO%` = SO / BFP, # Strikeout Percentage
          `BB%` = BB / BFP, # Walk Percentage
          `SO:BB` = SO / BB, # Strikeout to Walk Ratio
+         Range = (PO + A) / G, # Range Factor
          .after = SO) %>% 
   # Differentiate between Starting Pitchers and Relief Pitchers
   mutate(POS = ifelse(GS / G >= 0.7, "SP", "RP"),
@@ -397,7 +398,8 @@ active_pitching_stats <- active_pitching_stats %>%
   mutate(ped_use = ifelse(playerID %in% ped_players$playerID, "Yes", "No"),
          `Pitching Triple Crown` = as.factor(`Pitching Triple Crown`),
          inducted = c(NA),
-         play_era = "Modern") %>% 
+         play_era = "Modern",
+         Range = (PO + A) / G) %>% 
   mutate_if(is.character, as.factor)
 
 # Remove the variables for sourcing the file for model purposes
