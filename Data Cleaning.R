@@ -195,13 +195,16 @@ hof_pitching_stats <- hof_pitching_stats %>%
 # Add major batting milestone indicator variables
 hof_batting_stats <- hof_batting_stats %>% 
   mutate(`500_hr` = ifelse(HR >= 500, "Yes", "No"),
-         `3000_hit` = ifelse(H >= 3000, "Yes", "No") )
+         `3000_hit` = ifelse(H >= 3000, "Yes", "No"),
+         `1500_runs` = ifelse(R >= 1500, "Yes", "No"),
+         `1500_rbi` = ifelse(RBI >= 1500, "Yes", "No"),
+         `2500_gp` = ifelse(GP >= 2500, "Yes", "No"))
 
 # Add major pitching milestone indicator variables
 hof_pitching_stats <- hof_pitching_stats %>% 
   mutate(`300_wins` = ifelse(W >= 300, "Yes", "No"),
          `3000_so` = ifelse(SO >= 3000, "Yes", "No"),
-         `300_sv` = ifelse(SV >= 300, "Yes", "No") )
+         `300_sv` = ifelse(SV >= 300, "Yes", "No"))
 
 # Character vector of players accused/caught using Performance Enhancing Drugs
 # (PEDs)
@@ -373,7 +376,10 @@ active_pitching_stats <- active_pitching_stats %>%
 # Add major batting milestone indicator variables
 active_batting_stats <- active_batting_stats %>% 
   mutate(`500_hr` = ifelse(HR >= 500, "Yes", "No"),
-         `3000_hit` = ifelse(H >= 3000, "Yes", "No") )
+         `3000_hit` = ifelse(H >= 3000, "Yes", "No"),
+         `1500_runs` = ifelse(R >= 1500, "Yes", "No"),
+         `1500_rbi` = ifelse(RBI >= 1500, "Yes", "No"),
+         `2500_gp` = ifelse(GP >= 2500, "Yes", "No"))
 
 # Add major pitching milestone indicator variables
 active_pitching_stats <- active_pitching_stats %>% 
