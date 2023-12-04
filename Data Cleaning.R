@@ -25,7 +25,17 @@ hof_players <- HallOfFame %>%
 # Attach the HOF players to their respective Player Information
 hof_players <- hof_players %>% 
   inner_join(People, by = "playerID") %>% 
-  select(-c(11:22), -deathDate, -birthDate)
+  select(-c(11:22), -deathDate, -birthDate) %>% 
+  # Add indicator variable play_era to distinguish time frames of MLB play
+  mutate(debut = year(as.Date(debut)),
+         finalGame = year(as.Date(finalGame)),
+         play_era = as.factor(ifelse(finalGame < 1920, "Dead Ball", 
+               ifelse(finalGame >= 1920 & finalGame < 1941, "Live Ball", 
+               ifelse(finalGame >= 1941 & finalGame < 1961, "Integration",
+               ifelse(finalGame >= 1961 & finalGame < 1977, "Expansion",
+               ifelse(finalGame >= 1977 & finalGame < 1994, "Free Agency",
+               ifelse(finalGame >= 1994 & finalGame < 2006, "Steroids",
+                      "Modern Era") ) ) ) ) )) )
 
 # Attach the HOF players (batters) to their primary position
 # First Subset the Fielding Data to batters only
