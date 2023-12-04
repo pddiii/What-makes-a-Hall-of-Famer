@@ -116,7 +116,7 @@ rf_pitchers_feature_import
 
 ###### Boosted Tree
 
-bt_pitchers_model <- 
+boost_pitchers_model <- 
   boost_tree(
     trees = tune(),
     mtry = tune(),
@@ -131,17 +131,17 @@ bt_pitchers_model <-
   set_mode("classification")
 
 # Boosted tree pitchers recipe
-bt_pitchers_recipe <- 
+boost_pitchers_recipe <- 
   recipe(inducted ~ ., data = pitchers_training) %>%
   step_rm(playerID) %>% 
   step_impute_knn(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 # Boosted tree workflow Hall of Fame pitchers
-bt_pitchers_wf <- 
+boost_pitchers_wf <- 
   workflow() %>% 
-  add_recipe(bt_pitchers_recipe) %>% 
-  add_model(bt_pitchers_model)
+  add_recipe(boost_pitchers_recipe) %>% 
+  add_model(boost_pitchers_model)
 
 set.seed(1)
 # 10 Fold cross fold validation
@@ -159,37 +159,37 @@ boost_grid <- grid_latin_hypercube(
 
 registerDoParallel(cores = detectCores())
 
-bt_tune_res <- tune_grid(
-  bt_pitchers_wf,
+boost_tune_res <- tune_grid(
+  boost_pitchers_wf,
   resamples = boost_folds,
   grid = boost_grid,
   control = control_grid(save_pred = TRUE),
   metrics = metric_set(roc_auc, accuracy)
 )
 
-bt_pitchers_model <- 
-  finalize_model(bt_pitchers_model, select_best(bt_tune_res, "accuracy")[, 1:6])
+boost_pitchers_model <- 
+  finalize_model(boost_pitchers_model, select_best(boost_tune_res, "accuracy")[, 1:6])
 
-bt_pitchers_wf <- 
+boost_pitchers_wf <- 
   workflow() %>% 
-  add_recipe(bt_pitchers_recipe) %>% 
-  add_model(bt_pitchers_model)
+  add_recipe(boost_pitchers_recipe) %>% 
+  add_model(boost_pitchers_model)
 
-bt_pitchers_crossval <- 
-  bt_pitchers_wf %>% 
+boost_pitchers_crossval <- 
+  boost_pitchers_wf %>% 
   fit_resamples(resamples = boost_folds,
                 metrics = metric_set(roc_auc, accuracy))
 
-bt_pitchers_crossval %>% 
+boost_pitchers_crossval %>% 
   collect_metrics()
 
 set.seed(1)
-bt_pitchers_fit <- 
-  bt_pitchers_wf %>% 
+boost_pitchers_fit <- 
+  boost_pitchers_wf %>% 
   fit(data = pitchers_training)
 # Boosted Tree predictions for Hall of Fame Pitchers
 boost_pitchers_predictions <- 
-  bt_pitchers_fit %>% 
+  boost_pitchers_fit %>% 
   predict(pitchers_testing) %>% 
   cbind(pitchers_testing$inducted, pitchers_testing %>% select(playerID))
 # Accuracy of the Boosted Tree Predictions
@@ -198,22 +198,22 @@ boost_conf_mat <-
                         pitchers_testing$inducted), positive = "1")
 
 # Boosted model Active player hall of fame predictions
-bt_active_pitchers_prediction <- 
+boost_active_pitchers_prediction <- 
   bt_pitchers_fit %>% 
   predict(active_pitching_stats) %>% 
   cbind(active_pitching_stats %>% select(playerID))
 
-bt_active_pitchers_prediction %>%
+boost_active_pitchers_prediction %>%
   filter(.pred_class == 1) %>%
   select(playerID) %>% 
   inner_join(People, by = "playerID") %>%
   select(nameFirst, nameLast)
 
 # Boosted Tree Feature Importance
-bt_pitchers_feature_import <- 
-  bt_pitchers_fit %>% 
+boost_pitchers_feature_import <- 
+  boost_pitchers_fit %>% 
   extract_fit_parsnip() %>% 
   vip(geom = "point") +
   labs(title = "Boosted Tree variable importance")
 
-bt_pitchers_feature_import
+boost_pitchers_feature_import
