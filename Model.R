@@ -45,7 +45,7 @@ rf_grid <- grid_latin_hypercube(
   trees(range = c(25, 150)),
   mtry(range = c(5, 25)),
   min_n(range = c(5, 15)),
-  size = 100
+  size = 250
 )
 
 registerDoParallel(cores = detectCores())
@@ -84,7 +84,19 @@ rf_batters_predictions <-
   predict(batters_testing) %>% 
   cbind(batters_testing$inducted, batters_testing %>% select(playerID))
 # Accuracy of the Random Forest Predictions
-confusionMatrix(table(rf_batters_predictions$.pred_class, batters_testing$inducted))
+rf_conf_mat <- 
+  confusionMatrix(table(rf_batters_predictions$.pred_class, 
+                        batters_testing$inducted), positive = "1")
+# Players whose classifications were incorrect
+rf_incorrect <-
+  rf_batters_predictions %>% 
+  filter(.pred_class != `batters_testing$inducted`)
+# Stats for players with incorrect predictions
+hof_batting_stats %>% 
+  semi_join(rf_incorrect, by = "playerID")
+
+boost_batters_fit %>% 
+  predict(active_batting_stats)
 
 # Gradient Boosted model for Hall of Fame Batters
 boost_batters_model <- 
@@ -123,9 +135,9 @@ boost_grid <- grid_latin_hypercube(
   mtry(range = c(5, 25)),
   min_n(range = c(5, 15)),
   tree_depth(range = c(5, 15)),
-  learn_rate(range = c(-5, -1)),
-  loss_reduction(range = c(-5, -1)),
-  size = 100
+  learn_rate(),
+  loss_reduction(),
+  size = 250
 )
 
 registerDoParallel(cores = detectCores())
@@ -164,5 +176,17 @@ boost_batters_predictions <-
   predict(batters_testing) %>% 
   cbind(batters_testing$inducted, batters_testing %>% select(playerID))
 # Accuracy of the Random Forest Predictions
-confusionMatrix(table(boost_batters_predictions$.pred_class, batters_testing$inducted))
+boost_conf_mat <- 
+  confusionMatrix(table(boost_batters_predictions$.pred_class, 
+                        batters_testing$inducted), positive = "1")
 
+boost_incorrect <-
+  boost_batters_predictions %>% 
+  filter(.pred_class != `batters_testing$inducted`)
+
+hof_batting_stats %>% 
+  semi_join(boost_incorrect, by = "playerID")
+# Boosted model Active player hall of fame predictions
+boost_batters_fit %>% 
+  predict(active_batting_stats) %>% 
+  cbind(active_batting_stats %>% select(playerID))
