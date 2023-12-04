@@ -396,7 +396,8 @@ active_batting_stats <- active_batting_stats %>%
   mutate_if(is.character, as.factor) %>% 
   mutate(Range = (PO + A) / G, .after = `BB:SO`) %>% 
   rename(SB = SB.x, CS = CS.x, SB_against = SB.y, CS_for = CS.y) %>% 
-  mutate(PB = ifelse(POS == "C", PB, 0))
+  mutate(PB = ifelse(POS == "C", PB, 0)) %>% 
+  filter(playerID != "petitgr01")
 
 # Add ped_use indicator to the pitching stats
 active_pitching_stats <- active_pitching_stats %>% 
