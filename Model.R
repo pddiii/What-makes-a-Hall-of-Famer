@@ -85,3 +85,84 @@ rf_batters_predictions <-
   cbind(batters_testing$inducted, batters_testing %>% select(playerID))
 # Accuracy of the Random Forest Predictions
 confusionMatrix(table(rf_batters_predictions$.pred_class, batters_testing$inducted))
+
+# Gradient Boosted model for Hall of Fame Batters
+boost_batters_model <- 
+  boost_tree(
+    trees = tune(),
+    mtry = tune(),
+    min_n = tune(),
+    tree_depth = tune(),
+    learn_rate = tune(),
+    loss_reduction = tune(),
+    sample_size = c(1),
+    stop_iter = c(5)
+  ) %>% 
+  set_engine("xgboost") %>% 
+  set_mode("classification")
+
+# Boosted tree for batters recipe
+boost_batters_recipe <- 
+  recipe(inducted ~ ., data = batters_training) %>%
+  step_rm(playerID, GS, InnOuts, SH, SF, GIDP) %>% 
+  step_impute_bag(all_predictors()) %>%
+  step_normalize(all_numeric_predictors()) %>% 
+  step_dummy(all_nominal(), -all_outcomes())
+# Boosted tree workflow for Hall of Fame batters
+boost_batters_wf <- 
+  workflow() %>% 
+  add_recipe(boost_batters_recipe) %>% 
+  add_model(boost_batters_model)
+
+set.seed(1)
+# 10 Fold cross fold validation
+boost_folds <- vfold_cv(batters_training, v = 10)
+
+boost_grid <- grid_latin_hypercube(
+  trees(range = c(25, 150)),
+  mtry(range = c(5, 25)),
+  min_n(range = c(5, 15)),
+  tree_depth(range = c(5, 15)),
+  learn_rate(range = c(-5, -1)),
+  loss_reduction(range = c(-5, -1)),
+  size = 100
+)
+
+registerDoParallel(cores = detectCores())
+
+boost_tune_res <- tune_grid(
+  boost_batters_wf,
+  resamples = boost_folds,
+  grid = boost_grid,
+  control = control_grid(save_pred = TRUE),
+  metrics = metric_set(roc_auc, accuracy)
+)
+
+boost_batters_model <- 
+  finalize_model(boost_batters_model, select_best(boost_tune_res, "accuracy")[, 1:6])
+
+boost_batters_wf <- 
+  workflow() %>% 
+  add_recipe(boost_batters_recipe) %>% 
+  add_model(boost_batters_model)
+
+boost_batters_crossval <- 
+  boost_batters_wf %>% 
+  fit_resamples(resamples = boost_folds,
+                metrics = metric_set(roc_auc, accuracy))
+
+boost_batters_crossval %>% 
+  collect_metrics()
+
+set.seed(1)
+boost_batters_fit <- 
+  boost_batters_wf %>% 
+  fit(data = batters_training)
+# Random Forest predictions for Hall of Fame Batters
+boost_batters_predictions <- 
+  boost_batters_fit %>% 
+  predict(batters_testing) %>% 
+  cbind(batters_testing$inducted, batters_testing %>% select(playerID))
+# Accuracy of the Random Forest Predictions
+confusionMatrix(table(boost_batters_predictions$.pred_class, batters_testing$inducted))
+
