@@ -20,7 +20,7 @@ data(AwardsPlayers)
 hof_players <- HallOfFame %>% 
   mutate(pct_vote = round((votes / ballots), 4), .after = votes) %>%
   mutate(inducted = ifelse(inducted == "Y", 1, 0)) %>% 
-  filter(category == "Player", !is.na(pct_vote))
+  filter(category == "Player")
 
 # Attach the HOF players to their respective Player Information
 hof_players <- hof_players %>% 
@@ -249,7 +249,7 @@ hof_pitching_stats <- hof_pitching_stats %>%
 
 hof_induction <- hof_players %>% 
   select(playerID, inducted, play_era) %>% 
-  group_by(playerID) %>% 
+  group_by(playerID) %>%
   summarise(inducted = sum(inducted), play_era = first(play_era)) %>% 
   mutate(inducted = as.factor(inducted))
   
