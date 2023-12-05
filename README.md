@@ -5,4 +5,4 @@ MLB Hall of Fame Status Prediction Model
 
 ## Batter Variables
 
-[Batter's Dictionary](Dictionary/Batters%20Variables.md)
+[Batter's Dictionary](Dictionary/Batters_Variables.md)
