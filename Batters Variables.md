@@ -2,8 +2,8 @@
 
 - Most of these variables are statistics sourced from [Baseball-Reference](https://www.baseball-reference.com/)
 
-  | Variable  | Description                                      | Type of Variable | Calculation | Calculation |
-|-----------|--------------------------------------------------|-------------------|-------------|-------------|
+| Variable  | Description                                      | Type of Variable | Calculation | Calculation |
+|-----------|--------------------------------------------------|------------------|-------------|-------------|
 | playerID  | Unique identifier for each player.              | -                 | -           | -           |
 | POS       | Player's primary fielding position.             | -                 | -           | -           |
 | inducted  | Hall of Fame induction status (1 for Yes, 0 for No). | -              | -           | -           |
