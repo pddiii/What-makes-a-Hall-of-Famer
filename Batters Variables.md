@@ -2,10 +2,10 @@
 
 | Variable  | Description                                      | Type of Variable | Calculation | Example |
 |-----------|--------------------------------------------------|------------------|-------------|-------------|
-| playerID  | Unique identifier for each player.              | -                 | -           |"CF"            |
-| POS       | Player's primary fielding position.             | -                 | -           | -           |
+| playerID  | Unique identifier for each player.              | -                 | -           |"bondsba01"            |
+| POS       | Player's primary fielding position.             | -                 | -           | "CF"           |
 | inducted  | Hall of Fame induction status (1 for Yes, 0 for No). | -              | -           | -           |
-| play_era  | Player's era or era range during active play.   | -                 | -           | -           |
+| play_era  | Player's era or era range during active play.   | -                 | -           | "Dead Ball"           |
 | G         | Games played.                                    | Numeric           | -           | -           |
 | AB        | At-bats.                                         | Numeric           | -           | -           |
 | R         | Runs scored.                                    | Numeric           | -           | -           |
