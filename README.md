@@ -3,6 +3,6 @@ MLB Hall of Fame Status Prediction Model
 
 # Data Dictionary
 
-[Batter's Dictionary](Dictionary/Batters_Variables.md)
+[Batter's Dictionary](Dictionary/Batter_Variables.md)
 
-[Pitcher's Dictionary](Dictionary/Pitchers_Variables.md)
+[Pitcher's Dictionary](Dictionary/Pitcher_Variables.md)
