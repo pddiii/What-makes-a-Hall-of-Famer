@@ -264,7 +264,7 @@ boost_batters_feature_imp <-
   boost_batters_fit %>% 
   extract_fit_parsnip() %>% 
   vip(geom = "point") +
-  labs(title = "Batter's Random Forest variable importance")
+  labs(title = "Batter's Boosted Tree variable importance")
 
 ## Pitchers
 
