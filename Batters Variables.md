@@ -1,7 +1,5 @@
 # Table of Batter Variables
 
-- Most of these variables are statistics sourced from [Baseball-Reference](https://www.baseball-reference.com/)
-
 | Variable  | Description                                      | Type of Variable | Calculation | Calculation |
 |-----------|--------------------------------------------------|------------------|-------------|-------------|
 | playerID  | Unique identifier for each player.              | -                 | -           | -           |
