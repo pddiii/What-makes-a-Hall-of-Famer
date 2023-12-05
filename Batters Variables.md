@@ -35,15 +35,15 @@
 | CS_for    | Runners caught stealing by a catcher.           | Numeric           | -           | -           |
 | ZR        | Zone rating (fielding statistic).               | Numeric           | -           | -           |
 | PA        | Plate appearances.                              | Numeric           | -           | -           |
-| BA        | Batting average.                                | Numeric           | -           | $AB + BB + HBP + SF$           |
-| 1B        | Singles.                                        | Numeric           | -           | -           |
-| SLG       | Slugging percentage.                            | Numeric           | -           | -           |
-| OBP       | On-base percentage.                             | Numeric           | -           | -           |
-| OPS       | On-base plus slugging.                          | Numeric           | -           | -           |
-| SO%       | Strikeout percentage.                           | Numeric           | -           | -           |
-| BB%       | Walk percentage.                                | Numeric           | -           | -           |
-| BB:SO     | Walk-to-strikeout ratio.                        | Numeric           | -           | -           |
-| Range     | Defensive range.                                | Numeric           | -           | -           |
+| BA        | Batting average.                                | Numeric           | $AB + BB + HBP + SF$           | -           |
+| 1B        | Singles.                                        | Numeric           | $\frac{H}{AB}$           | -           |
+| SLG       | Slugging percentage.                            | Numeric           | $\frac{1B + 2 * X2B + 3 * X3B + 4 * HR}{AB}$           | -           |
+| OBP       | On-base percentage.                             | Numeric           | $\frac{H + BB + HBP}{PA}$           | -          |
+| OPS       | On-base plus slugging.                          | Numeric           | $OBP + SLG$           | -           |
+| SO%       | Strikeout percentage.                           | Numeric           | $\frac{SO}{PA}$           | -           |
+| BB%       | Walk percentage.                                | Numeric           | $\frac{BB}{PA}$           | -           |
+| BB:SO     | Walk-to-strikeout ratio.                        | Numeric           | $\frac{BB}{SO}$           | -           |
+| Range     | Defensive range.                                | Numeric           | $\frac{A + PO}{G}$           | -           |
 | Triple Crown | Achievement of leading the league in batting average, home runs, and RBIs in the same season. | Factor (0/1/2) | - | - |
 | 500_hr    | 500 or more career home runs. (0 for No, 1 for Yes)                   | Binary (0/1)      | -           | -           |
 | 3000_hit  | 3000 or more career hits. (0 for No, 1 for Yes)                       | Binary (0/1)      | -           | -           |
