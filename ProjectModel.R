@@ -91,7 +91,7 @@ rf_pitchers_prediction <-
   cbind(pitchers_testing %>% select(playerID))
 
 # Accuracy of the Random Forest Predictions
-confusionMatrix(table(rf_pitchers_prediction$.pred_class, pitchers_testing$inducted))
+confusionMatrix(table(rf_pitchers_prediction$.pred_class, pitchers_testing$inducted), postive = "1")
 
 ## Prediction of current player to make Hall of Fame
 active_pitchers_prediction <-
