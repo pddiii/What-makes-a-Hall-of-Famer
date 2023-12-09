@@ -10,6 +10,8 @@ library(doParallel) # For parallel processing
 library(caret) # For diagnostics of models
 library(vip) # For variable importance
 
+### Batting
+
 # Split the Hall of Fame data for batters into a training and testing
 # set
 set.seed(1)
