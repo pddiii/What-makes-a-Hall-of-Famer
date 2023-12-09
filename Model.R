@@ -273,7 +273,7 @@ boost_batters_feature_imp <-
 ###### Random Forest
 
 # Split data 
-set.seed(1)
+set.seed(10)
 data_split <- initial_split(hof_pitching_stats, prop = 0.70,
                             strata = POS)
 pitchers_training <- training(data_split)
@@ -300,7 +300,7 @@ rf_pitchers_wf <-
   add_recipe(rf_pitchers_recipe) %>% 
   add_model(rf_pitchers_model)
 
-set.seed(1)
+set.seed(10)
 # 10 Fold cross fold validation
 rf_folds <- vfold_cv(pitchers_training, v = 10)
 
@@ -338,7 +338,7 @@ rf_pitchers_crossval %>%
   collect_metrics()
 
 # Final fit
-set.seed(1)
+set.seed(10)
 rf_pitchers_fit <- 
   rf_pitchers_wf %>% 
   fit(data = pitchers_training)
@@ -402,7 +402,7 @@ boost_pitchers_wf <-
   add_recipe(boost_pitchers_recipe) %>% 
   add_model(boost_pitchers_model)
 
-set.seed(1)
+set.seed(10)
 # 10 Fold cross fold validation
 boost_folds <- vfold_cv(pitchers_training, v = 10)
 
@@ -442,7 +442,7 @@ boost_pitchers_crossval <-
 boost_pitchers_crossval %>% 
   collect_metrics()
 
-set.seed(1)
+set.seed(10)
 boost_pitchers_fit <- 
   boost_pitchers_wf %>% 
   fit(data = pitchers_training)
@@ -458,7 +458,7 @@ boost_conf_mat <-
 
 # Boosted model Active player hall of fame predictions
 boost_active_pitchers_prediction <- 
-  bt_pitchers_fit %>% 
+  boost_pitchers_fit %>% 
   predict(active_pitching_stats) %>% 
   cbind(active_pitching_stats %>% select(playerID))
 
