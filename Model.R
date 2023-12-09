@@ -284,7 +284,7 @@ rf_pitchers_model <-
   rand_forest(trees = tune(),
               mtry = tune(),
               min_n = tune()) %>% 
-  set_engine("ranger") %>% 
+  set_engine("ranger", importance = "impurity") %>% 
   set_mode("classification")
 # Random Forest recipe for Hall of Fame pitchers
 rf_pitchers_recipe <- 
