@@ -80,7 +80,7 @@ rf_batters_crossval <-
                 metrics = metric_set(roc_auc, accuracy))
 
 # Check the accuracy and roc_auc
-rf_crossval_metrics <- rf_batters_crossval %>% 
+rf_batters_cv_metrics <- rf_batters_crossval %>% 
   collect_metrics()
 
 # Fit the workflow to the training data
@@ -96,19 +96,19 @@ rf_batters_predictions <-
   cbind(batters_testing$inducted, batters_testing %>% select(playerID))
 
 # Accuracy of the Random Forest Predictions on testing data
-rf_conf_mat <- 
+rf_batters_conf_mat <- 
   confusionMatrix(table(rf_batters_predictions$.pred_class, 
                         batters_testing$inducted), positive = "1")
 
 # Players whose classifications were incorrect from testing data
-rf_incorrect <-
+rf_incorrect_batters <-
   rf_batters_predictions %>% 
   filter(.pred_class != `batters_testing$inducted`) %>% 
   rename(Inducted = .pred_class)
 
 # Add the statistics, and names of batters who were classified incorrectly
-rf_incorrect <- hof_batting_stats %>% 
-  semi_join(rf_incorrect, by = "playerID") %>% 
+rf_incorrect_batters <- hof_batting_stats %>% 
+  semi_join(rf_incorrect_batters, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
 
@@ -119,15 +119,15 @@ rf_active_batters <-
   cbind(active_batting_stats %>% select(playerID))
 
 # Active players predicted to be hall of famers in the future
-rf_future_hof <- 
+rf_future_hof_batters <- 
   rf_active_batters %>% 
   filter(.pred_class == 1) %>% 
   rename(Inducted = .pred_class)
 
 # Attaching the active players batting stats and names predicted to be Hall of
 # Famers some day
-rf_future_hof <- active_batting_stats %>% 
-  semi_join(rf_future_hof, by = "playerID") %>% 
+rf_future_hof_batters <- active_batting_stats %>% 
+  semi_join(rf_future_hof_batters, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
 
@@ -211,7 +211,7 @@ boost_batters_crossval <-
                 metrics = metric_set(roc_auc, accuracy))
 
 # Collect the cross validation metrics for boost model
-boost_crossval_metrics <- 
+boost_batters_cv_metrics <- 
   boost_batters_crossval %>% 
   collect_metrics()
 
@@ -228,18 +228,18 @@ boost_batters_predictions <-
   cbind(batters_testing$inducted, batters_testing %>% select(playerID))
 
 # Confusion Matrix of the Boost Predictions
-boost_conf_mat <- 
+boost_batters_conf_mat <- 
   confusionMatrix(table(boost_batters_predictions$.pred_class, 
                         batters_testing$inducted), positive = "1")
 
 # Boost Incorrect Hall of Fame classification
-boost_incorrect <-
+boost_incorrect_batters <-
   boost_batters_predictions %>% 
   filter(.pred_class != `batters_testing$inducted`) %>% 
   rename(Inducted = .pred_class)
 
-boost_incorrect <- hof_batting_stats %>% 
-  semi_join(boost_incorrect, by = "playerID") %>% 
+boost_incorrect_batters <- hof_batting_stats %>% 
+  semi_join(boost_incorrect_batters, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
 
@@ -250,14 +250,14 @@ boost_active_batters <-
   cbind(active_batting_stats %>% select(playerID))
 
 # Boosted models prediction of future Hall of Fame batters
-boost_future_hof <- 
+boost_future_hof_batters <- 
   boost_active_batters %>% 
   filter(.pred_class == 1) %>% 
   rename(Inducted = .pred_class)
 
 # Attach the names and statistics to the predicted future hall of famers
-boost_future_hof <- active_batting_stats %>% 
-  semi_join(boost_future_hof, by = "playerID") %>% 
+boost_future_hof_batters <- active_batting_stats %>% 
+  semi_join(boost_future_hof_batters, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
 
@@ -334,7 +334,7 @@ rf_pitchers_crossval <-
   fit_resamples(resamples = rf_folds,
                 metrics = metric_set(roc_auc, accuracy))
 
-rf_pitchers_crossval %>% 
+rf_pitchers_cv_metrics <- rf_pitchers_crossval %>% 
   collect_metrics()
 
 # Final fit
@@ -350,7 +350,9 @@ rf_pitchers_prediction <-
   cbind(pitchers_testing %>% select(playerID))
 
 # Accuracy of the Random Forest Predictions
-confusionMatrix(table(rf_pitchers_prediction$.pred_class, pitchers_testing$inducted), positive = "1")
+rf_pitchers_conf_mat <-
+  confusionMatrix(table(rf_pitchers_prediction$.pred_class, 
+                        pitchers_testing$inducted), positive = "1")
 
 ## Prediction of current player to make Hall of Fame
 active_pitchers_prediction <-
@@ -358,7 +360,7 @@ active_pitchers_prediction <-
   predict(active_pitching_stats) %>% 
   cbind(active_pitching_stats %>% select(playerID))
 
-active_pitchers_prediction %>%
+rf_future_hof_pitchers <- active_pitchers_prediction %>%
   filter(.pred_class == 1) %>%
   select(playerID) %>% 
   inner_join(People, by = "playerID") %>%
@@ -369,8 +371,6 @@ rf_pitchers_feature_import <-
   extract_fit_parsnip() %>%
   vip(geom = "point") + 
   labs(title = "Random forest variable importance") 
-
-rf_pitchers_feature_import
 
 
 ###### Boosted Tree
@@ -439,7 +439,7 @@ boost_pitchers_crossval <-
   fit_resamples(resamples = boost_folds,
                 metrics = metric_set(roc_auc, accuracy))
 
-boost_pitchers_crossval %>% 
+boost_pitchers_cv_metrics <- boost_pitchers_crossval %>% 
   collect_metrics()
 
 set.seed(10)
@@ -452,7 +452,7 @@ boost_pitchers_predictions <-
   predict(pitchers_testing) %>% 
   cbind(pitchers_testing$inducted, pitchers_testing %>% select(playerID))
 # Accuracy of the Boosted Tree Predictions
-boost_conf_mat <- 
+boost_pitchers_conf_mat <- 
   confusionMatrix(table(boost_pitchers_predictions$.pred_class, 
                         pitchers_testing$inducted), positive = "1")
 
@@ -462,7 +462,7 @@ boost_active_pitchers_prediction <-
   predict(active_pitching_stats) %>% 
   cbind(active_pitching_stats %>% select(playerID))
 
-boost_active_pitchers_prediction %>%
+boost_future_hof_pitchers <- boost_active_pitchers_prediction %>%
   filter(.pred_class == 1) %>%
   select(playerID) %>% 
   inner_join(People, by = "playerID") %>%
@@ -474,5 +474,3 @@ boost_pitchers_feature_import <-
   extract_fit_parsnip() %>% 
   vip(geom = "point") +
   labs(title = "Boosted Tree variable importance")
-
-boost_pitchers_feature_import
