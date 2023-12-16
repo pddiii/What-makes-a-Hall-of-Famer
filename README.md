@@ -1,5 +1,6 @@
 # STATS-140XP-Final-Project
-MLB Hall of Fame Status Prediction Model
+
+National Baseball Hall of Fame Status Prediction Model using Random Forest and Gradient Boosted Decision Trees.
 
 # Contributors
 
@@ -13,7 +14,17 @@ MLB Hall of Fame Status Prediction Model
 
 - **Alan Wong** - Final Report
 
-# Data Dictionary
+# Resources
+
+- [tidyverse](https://www.tidyverse.org/)
+- [tidymodels](https://www.tidymodels.org/)
+- [Lahman Database for R](https://cran.r-project.org/web/packages/Lahman/index.html)
+- [xgboost](https://cran.r-project.org/web/packages/xgboost/index.html)
+- [doParallel](https://cran.r-project.org/web/packages/doParallel/index.html)
+- [caret](https://cran.r-project.org/web/packages/caret/index.html)
+- [vip](https://cran.r-project.org/web/packages/vip/index.html)
+
+## Data Dictionary
 
 [Batter's Dictionary](Dictionary/Batter_Variables.md)
 
