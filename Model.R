@@ -370,7 +370,7 @@ rf_pitchers_feature_import <-
   rf_pitchers_fit %>%
   extract_fit_parsnip() %>%
   vip(geom = "point") + 
-  labs(title = "Random forest variable importance") 
+  labs(title = "Pitcher's Random forest variable importance") 
 
 
 ###### Boosted Tree
@@ -473,4 +473,4 @@ boost_pitchers_feature_import <-
   boost_pitchers_fit %>% 
   extract_fit_parsnip() %>% 
   vip(geom = "point") +
-  labs(title = "Boosted Tree variable importance")
+  labs(title = "Pitcher's Boosted Tree variable importance")
