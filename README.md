@@ -13,10 +13,12 @@ MLB Hall of Fame Status Prediction Model
 
 - **Alan Wong** - Final Report
 
-
-
 # Data Dictionary
 
 [Batter's Dictionary](Dictionary/Batter_Variables.md)
 
 [Pitcher's Dictionary](Dictionary/Pitcher_Variables.md)
+
+# Full Project Report
+
+[Baseball Hall of Fame Prediction](Final-Report.pdf)
