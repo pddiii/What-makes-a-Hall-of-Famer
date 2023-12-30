@@ -4,6 +4,8 @@ National Baseball Hall of Fame Status Prediction Model using Random Forest and G
 
 # Contributors
 
+**Commits made post 12/16/2023 are done by Peter D. DePaul III**
+
 - **Peter D. DePaul III** - Data Cleaning, Batter's Models, and Final Report
 
 - **Nelson Duong** - Pitcher's Models & Exploratory Data Analysis
