@@ -14,6 +14,8 @@ data(Pitching)
 data(People)
 # Load the Season Awards Data
 data(AwardsPlayers)
+# Load All Star Data
+data(AllstarFull)
 
 # Players who have appeared on the Hall of Fame Ballots
 # and received votes
@@ -416,7 +418,7 @@ active_pitching_stats <- active_pitching_stats %>%
   mutate_if(is.character, as.factor)
 
 # Remove the variables for sourcing the file for model purposes
-rm(Batting, Fielding, AwardsPlayers, active_batters_fielding, active_of_fielding,
+rm(Batting, Fielding, active_batters_fielding, active_of_fielding,
    active_pitchers_fielding, active_players, batters_fielding, career_batting,
    career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
    hof_of_fielding, hof_induction, hof_pitchers_fielding, 
@@ -518,14 +520,45 @@ hof_batting_stats <- hof_batting_stats %>%
   arrange(playerID)
 
 # Bind together active batters stats with FanGraphs variables
-
 active_batting_stats <- active_batting_stats %>% 
   inner_join(player_data %>% select(playerID, fg_playerID), by = "playerID") %>% 
   relocate(fg_playerID, .after = playerID)
 
 # Identify which active batters are not included in the fg_batters data
-active_batting_stats %>% 
+act_bat_missing <- active_batting_stats %>% 
   filter(!(active_batting_stats$fg_playerID %in% fg_batters$fg_playerID))
+# Manually add their missing FanGraphs metrics
+act_bat_missing <- act_bat_missing %>% mutate(ISO = c(0.075, 0.146),
+                          BABIP = c(0.271, 0.235),
+                          wOBA = c(0.248, 0.265),
+                          WAR = c(0.8, 3.5),
+                          `wRC+` = c(53, 63))
+# Bind the missing players rows back to the active batters
+active_batting_stats <- active_batting_stats %>% bind_rows(act_bat_missing)
+
+# Determine the number of All Star appearances
+all_star <- AllstarFull %>% 
+  replace_na(list(startingPos = 0)) %>% 
+  select(playerID, yearID, GP, startingPos) %>%
+  mutate(startingPos = ifelse(startingPos != 0, 1, 0)) %>% 
+  group_by(playerID) %>% 
+  summarise(all_star_gp = sum(GP), all_star_starts = sum(startingPos))
+
+extra_awards <- c("Most Valuable Player", "World Series MVP", "Cy Young Award",
+                  "Gold Glove", "Silver Slugger", "NLCS MVP", "ALCS MVP", 
+                  "Hank Aaron Award")
+
+extra_votes <- AwardsPlayers %>% 
+  filter(awardID %in% extra_awards)
+# Separate the gold glove winners from other data
+gold_glove <- extra_votes %>% filter(awardID == "Gold Glove")
+
+# Format the gold glove by number of wins by position
+gold_glove <- gold_glove %>% 
+  group_by(playerID, notes) %>% 
+  summarise(num_gold_gloves = n()) %>% 
+  arrange(desc(num_gold_gloves)) %>% 
+  ungroup()
 
 ## Create .csv files for the batting and pitching data sets
 
