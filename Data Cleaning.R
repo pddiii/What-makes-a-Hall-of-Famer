@@ -1,5 +1,6 @@
 library(Lahman)
 library(tidyverse)
+library(baseballr)
 # Load the Hall of Fame ballots data
 data(HallOfFame)
 # Load the Batting Data
@@ -417,27 +418,21 @@ active_pitching_stats <- active_pitching_stats %>%
          play_era = "Modern") %>% 
   mutate_if(is.character, as.factor)
 
-# Remove the variables for sourcing the file for model purposes
-rm(Batting, Fielding, active_batters_fielding, active_of_fielding,
-   active_pitchers_fielding, active_players, batters_fielding, career_batting,
-   career_pitching, FieldingOFsplit, HallOfFame, hof_batters_fielding,
-   hof_of_fielding, hof_induction, hof_pitchers_fielding, 
-   num_awards, ped_players, pitchers_fielding, Pitching,
-   awards, ped_use)
-
 ### Contributions below made by Peter D. DePaul III on 12/30/2023
 
-library(baseballr)
+# player_data <- chadwick_player_lu()
+# # Filter for only people who have played a game in the MLB
+# player_data <- player_data %>% filter(!is.na(mlb_played_first))
+# # Remove unnecessary variables
+# player_data <- player_data %>% select(key_bbref, key_fangraphs,
+#                                       c(name_last:mlb_umpired_last))
+# # Rename the ID variables
+# player_data <- player_data %>% rename(playerID = key_bbref,
+#                                       fg_playerID = key_fangraphs)
 
-player_data <- chadwick_player_lu()
-# Filter for only people who have played a game in the MLB
-player_data <- player_data %>% filter(!is.na(mlb_played_first))
-# Remove unnecessary variables
-player_data <- player_data %>% select(key_bbref, key_fangraphs, 
-                                      c(name_last:mlb_umpired_last))
-# Rename the ID variables
-player_data <- player_data %>% rename(playerID = key_bbref,
-                                      fg_playerID = key_fangraphs)
+# Create a csv for the Chadwick data, so it does not have to re-run every time
+# write_csv(player_data, "chadwick_dictionary.csv")
+player_data <- read_csv("chadwick_dictionary.csv")
 
 # Load in the FanGraphs data for batting and pitching
 fg_batters <- read_csv("fg_batting_data.csv")
@@ -504,15 +499,15 @@ fg_bat_missing <- hof_batting_stats %>%
 
 # Add the desired FanGraphs variables to the hof_batting_stats
 hof_batting_stats <- hof_batting_stats %>% inner_join(fg_batters %>% 
-                                   select(fg_playerID, c(ISO:`wRC+`)),
-                                 by = "fg_playerID")
+                                                        select(fg_playerID, c(ISO:`wRC+`)),
+                                                      by = "fg_playerID")
 
 # Manually add the respective FanGraphs variables for missing players
 fg_bat_missing <- fg_bat_missing %>% mutate(ISO = c(0.049, 0.103, 0.073),
-                          BABIP = c(0.277, 0.273, 0.262),
-                          wOBA = c(0.277, 0.282, 0.268),
-                          WAR = c(6.2, -1.7, 6.4),
-                          `wRC+` = c(94, 75, 90))
+                                            BABIP = c(0.277, 0.273, 0.262),
+                                            wOBA = c(0.277, 0.282, 0.268),
+                                            WAR = c(6.2, -1.7, 6.4),
+                                            `wRC+` = c(94, 75, 90))
 
 # Bind together all the hof_batting_stats
 hof_batting_stats <- hof_batting_stats %>% 
@@ -529,47 +524,210 @@ act_bat_missing <- active_batting_stats %>%
   filter(!(active_batting_stats$fg_playerID %in% fg_batters$fg_playerID))
 # Manually add their missing FanGraphs metrics
 act_bat_missing <- act_bat_missing %>% mutate(ISO = c(0.075, 0.146),
-                          BABIP = c(0.271, 0.235),
-                          wOBA = c(0.248, 0.265),
-                          WAR = c(0.8, 3.5),
-                          `wRC+` = c(53, 63))
+                                              BABIP = c(0.271, 0.235),
+                                              wOBA = c(0.248, 0.265),
+                                              WAR = c(0.8, 3.5),
+                                              `wRC+` = c(53, 63))
 # Bind the missing players rows back to the active batters
 active_batting_stats <- active_batting_stats %>% bind_rows(act_bat_missing)
+
+# Add the desired FanGraphs variables to the hof_pitching_stats
+hof_pitching_stats <- hof_pitching_stats %>%
+  inner_join(fg_pitchers %>%
+               select(fg_playerID, WAR, c(WHIP:FIP)), by = "fg_playerID")
+
+fg_pitch_missing <- hof_pitching_stats %>% 
+  anti_join(fg_hof_pitching, by = "fg_playerID")
+
+# Manually add the respective FanGraphs variables for missing players
+fg_pitch_missing <- fg_pitch_missing %>% 
+  mutate(
+    WAR = c(42.5, 32.3, 32.4, 45.6),
+    WHIP = c(1.32, 1.30, 1.24, 1.13),
+    BABIP = c(0.295, 0.283, 0.267, 0.276),
+    `LOB%` = c(0.717, 0.732, 0.727, 0.770),
+    FIP = c(3.86, 4.30, 2.86, 3.44)
+  )
+
+# Bind together all the hof_batting_stats
+hof_pitching_stats <- hof_pitching_stats %>% 
+  bind_rows(fg_pitch_missing) %>%  
+  arrange(playerID)
+
+# Bind together active batters stats with FanGraphs variables
+active_pitching_stats <- active_pitching_stats %>% 
+  inner_join(player_data %>% select(playerID, fg_playerID), by = "playerID") %>% 
+  relocate(fg_playerID, .after = playerID)
+
+# Add the desired FanGraphs variables to the active_pitching_stats
+active_pitching_stats <- active_pitching_stats %>%
+  inner_join(fg_pitchers %>%
+               select(fg_playerID, WAR, c(WHIP:FIP)), by = "fg_playerID")
 
 # Determine the number of All Star appearances
 all_star <- AllstarFull %>% 
   replace_na(list(startingPos = 0)) %>% 
-  select(playerID, yearID, GP, startingPos) %>%
-  mutate(startingPos = ifelse(startingPos != 0, 1, 0)) %>% 
-  group_by(playerID) %>% 
-  summarise(all_star_gp = sum(GP), all_star_starts = sum(startingPos))
+  select(playerID, yearID, GP) %>% 
+  group_by(playerID, yearID) %>% 
+  summarise(all_star_gp = n()) %>% 
+  mutate(all_star_gp = ifelse(all_star_gp <= 2, 1, 0)) %>% 
+  summarise(all_star_appearances = n())
 
-extra_awards <- c("Most Valuable Player", "World Series MVP", "Cy Young Award",
-                  "Gold Glove", "Silver Slugger", "NLCS MVP", "ALCS MVP", 
-                  "Hank Aaron Award")
+extra_awards <- tolower(
+  c(
+    "Most Valuable Player",
+    "World Series MVP",
+    "Cy Young Award",
+    "Gold Glove",
+    "Silver Slugger",
+    "Hank Aaron Award"
+  )
+)
 
 extra_votes <- AwardsPlayers %>% 
+  mutate(awardID = tolower(awardID)) %>% 
   filter(awardID %in% extra_awards)
 # Separate the gold glove winners from other data
-gold_glove <- extra_votes %>% filter(awardID == "Gold Glove")
-
 # Format the gold glove by number of wins by position
-gold_glove <- gold_glove %>% 
+gold_glove <- extra_votes %>% 
+  filter(awardID == "gold glove") %>% 
   group_by(playerID, notes) %>% 
   summarise(num_gold_gloves = n()) %>% 
   arrange(desc(num_gold_gloves)) %>% 
-  ungroup()
+  ungroup() %>% 
+  select(playerID, num_gold_gloves)
 
+mvp <- extra_votes %>% 
+  filter(awardID == "most valuable player") %>% 
+  group_by(playerID) %>% 
+  summarise(num_mvp = n()) %>% 
+  arrange(desc(num_mvp))
+
+ws_mvp <- extra_votes %>% 
+  filter(awardID == "world series mvp") %>% 
+  group_by(playerID) %>% 
+  summarise(num_ws_mvp = n()) %>% 
+  arrange(desc(num_ws_mvp))
+
+cy_young <- extra_votes %>% 
+  filter(awardID == "cy young award") %>% 
+  group_by(playerID) %>% 
+  summarise(num_cy_young = n()) %>% 
+  arrange(desc(num_cy_young))
+
+silver_slugger <- extra_votes %>% 
+  filter(awardID == "silver slugger") %>% 
+  group_by(playerID) %>% 
+  summarise(silver_slugger = n()) %>% 
+  arrange(desc(silver_slugger))
+# For the Hank Aaron batting award
+hank_aaron <- extra_votes %>% 
+  filter(awardID == "hank aaron award") %>% 
+  group_by(playerID) %>% 
+  summarise(hank_aaron_award = n()) %>% 
+  arrange(desc(hank_aaron_award))
+
+# Add the player award counts, and all_star appearances to hof batting stats
+hof_batting_stats <- hof_batting_stats %>% 
+  left_join(all_star, by = "playerID") %>% 
+  left_join(gold_glove, by = "playerID") %>% 
+  left_join(mvp, by = "playerID") %>%
+  left_join(ws_mvp, by = "playerID") %>%
+  left_join(silver_slugger, by = "playerID") %>%
+  left_join(hank_aaron, by = "playerID") %>% 
+  arrange(desc(all_star_appearances)) %>% 
+  distinct(playerID, .keep_all = TRUE)
+# Add the player award counts, and all_star appearances to active batting stats
+active_batting_stats <- active_batting_stats %>% 
+  left_join(all_star, by = "playerID") %>% 
+  left_join(gold_glove, by = "playerID") %>% 
+  left_join(mvp, by = "playerID") %>%
+  left_join(ws_mvp, by = "playerID") %>%
+  left_join(silver_slugger, by = "playerID") %>%
+  left_join(hank_aaron, by = "playerID") %>% 
+  arrange(desc(all_star_appearances)) %>% 
+  distinct(playerID, .keep_all = TRUE)
+
+# Add the player award counts, and all_star appearances to hof batting stats
+hof_pitching_stats <- hof_pitching_stats %>% 
+  left_join(all_star, by = "playerID") %>% 
+  left_join(gold_glove, by = "playerID") %>% 
+  left_join(cy_young, by = "playerID") %>%
+  left_join(mvp, by = "playerID") %>%
+  left_join(ws_mvp, by = "playerID") %>%
+  arrange(desc(all_star_appearances)) %>% 
+  distinct(playerID, .keep_all = TRUE)
+
+# Add the player award counts, and all_star appearances to active batting stats
+active_pitching_stats <- active_pitching_stats %>% 
+  left_join(all_star, by = "playerID") %>% 
+  left_join(gold_glove, by = "playerID") %>% 
+  left_join(cy_young, by = "playerID") %>%
+  left_join(mvp, by = "playerID") %>%
+  left_join(ws_mvp, by = "playerID") %>%
+  arrange(desc(all_star_appearances)) %>% 
+  distinct(playerID, .keep_all = TRUE)
+
+# Remove the variables for sourcing the file for model purposes
+rm(
+  Batting,
+  Fielding,
+  active_batters_fielding,
+  active_of_fielding,
+  active_pitchers_fielding,
+  active_players,
+  batters_fielding,
+  career_batting,
+  career_pitching,
+  FieldingOFsplit,
+  HallOfFame,
+  hof_batters_fielding,
+  hof_of_fielding,
+  hof_induction,
+  hof_pitchers_fielding,
+  num_awards,
+  ped_players,
+  pitchers_fielding,
+  Pitching,
+  awards,
+  ped_use,
+  act_bat_missing,
+  all_star,
+  AllstarFull,
+  AwardsPlayers,
+  cy_young,
+  extra_votes,
+  extra_awards,
+  originals,
+  replacements,
+  fg_bat_missing,
+  fg_batters,
+  fg_hof_batting,
+  fg_hof_pitching,
+  fg_pitch_missing,
+  fg_pitchers,
+  gold_glove,
+  hank_aaron,
+  hof_players,
+  missing_hof_bats_chad,
+  missing_hof_pitch_chad,
+  mvp,
+  People,
+  player_data,
+  silver_slugger,
+  ws_mvp
+)
+  
 ## Create .csv files for the batting and pitching data sets
 
 #  Hall of Fame batting
 # write.csv(hof_batting_stats, file = "hof_batting.csv")
-# 
+ 
 #  Hall of Fame Pitching
 # write.csv(hof_pitching_stats, file = "hof_pitching.csv")
-# 
+
 #  Active Batting
 # write.csv(active_batting_stats, file = "active_batting.csv")
-# 
+
 #  Active Pitching
-# write.csv(active_pitching_stats, file = "active_pitching.")
+# write.csv(active_pitching_stats, file = "active_pitching.csv")
