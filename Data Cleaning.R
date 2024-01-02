@@ -432,7 +432,7 @@ active_pitching_stats <- active_pitching_stats %>%
 
 # Create a csv for the Chadwick data, so it does not have to re-run every time
 # write_csv(player_data, "chadwick_dictionary.csv")
-player_data <- read_csv("chadwick_dictionary.csv")
+player_data <- read_csv("Cleaned-Datasets/chadwick_dictionary.csv")
 
 # Load in the FanGraphs data for batting and pitching
 fg_batters <- read_csv("fg_batting_data.csv")
