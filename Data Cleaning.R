@@ -636,7 +636,8 @@ hof_batting_stats <- hof_batting_stats %>%
   left_join(silver_slugger, by = "playerID") %>%
   left_join(hank_aaron, by = "playerID") %>% 
   arrange(desc(all_star_appearances)) %>% 
-  distinct(playerID, .keep_all = TRUE)
+  distinct(playerID, .keep_all = TRUE) %>% 
+  replace(is.na(.), 0)
 # Add the player award counts, and all_star appearances to active batting stats
 active_batting_stats <- active_batting_stats %>% 
   left_join(all_star, by = "playerID") %>% 
@@ -646,7 +647,8 @@ active_batting_stats <- active_batting_stats %>%
   left_join(silver_slugger, by = "playerID") %>%
   left_join(hank_aaron, by = "playerID") %>% 
   arrange(desc(all_star_appearances)) %>% 
-  distinct(playerID, .keep_all = TRUE)
+  distinct(playerID, .keep_all = TRUE) %>% 
+  replace(is.na(.), 0)
 
 # Add the player award counts, and all_star appearances to hof batting stats
 hof_pitching_stats <- hof_pitching_stats %>% 
@@ -656,7 +658,8 @@ hof_pitching_stats <- hof_pitching_stats %>%
   left_join(mvp, by = "playerID") %>%
   left_join(ws_mvp, by = "playerID") %>%
   arrange(desc(all_star_appearances)) %>% 
-  distinct(playerID, .keep_all = TRUE)
+  distinct(playerID, .keep_all = TRUE) %>% 
+  replace(is.na(.), 0)
 
 # Add the player award counts, and all_star appearances to active batting stats
 active_pitching_stats <- active_pitching_stats %>% 
@@ -666,7 +669,8 @@ active_pitching_stats <- active_pitching_stats %>%
   left_join(mvp, by = "playerID") %>%
   left_join(ws_mvp, by = "playerID") %>%
   arrange(desc(all_star_appearances)) %>% 
-  distinct(playerID, .keep_all = TRUE)
+  distinct(playerID, .keep_all = TRUE) %>% 
+  replace(is.na(.), 0)
 
 # Remove the variables for sourcing the file for model purposes
 rm(
