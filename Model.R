@@ -15,7 +15,7 @@ library(vip) # For variable importance
 # Split the Hall of Fame data for batters into a training and testing
 # set
 set.seed(1)
-data_split <- initial_split(hof_batting_stats, prop = 0.70,
+data_split <- initial_split(fg_hof_batting, prop = 0.70,
                             strata = POS)
 batters_training <- training(data_split)
 batters_testing <- testing(data_split)
@@ -31,7 +31,10 @@ rf_batters_model <-
 # Random Forest recipe for Hall of Fame Batters
 rf_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, GS, InnOuts, E) %>% 
+  step_rm(playerID, fg_playerID, GIDP, GS, InnOuts, PO, A, E, DP, PB, WP,
+          SB_against, CS_for, ZR, G, AB, PA, `1B`, `2B`, `3B`, BB, IBB, SO,
+          HBP, SF, SH, GDP) %>% 
+  step_mutate(`Triple Crown` = as.numeric(`Triple Crown`)) %>% 
   step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
@@ -107,7 +110,7 @@ rf_incorrect_batters <-
   rename(Inducted = .pred_class)
 
 # Add the statistics, and names of batters who were classified incorrectly
-rf_incorrect_batters <- hof_batting_stats %>% 
+rf_incorrect_batters <- fg_hof_batting %>% 
   semi_join(rf_incorrect_batters, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
@@ -115,8 +118,8 @@ rf_incorrect_batters <- hof_batting_stats %>%
 # Random Forest Active Batters Hall of Fame Predictions
 rf_active_batters <- 
   rf_batters_fit %>% 
-  predict(active_batting_stats) %>% 
-  cbind(active_batting_stats %>% select(playerID))
+  predict(fg_active_batting) %>% 
+  cbind(fg_active_batting %>% select(playerID))
 
 # Active players predicted to be hall of famers in the future
 rf_future_hof_batters <- 
@@ -126,7 +129,7 @@ rf_future_hof_batters <-
 
 # Attaching the active players batting stats and names predicted to be Hall of
 # Famers some day
-rf_future_hof_batters <- active_batting_stats %>% 
+rf_future_hof_batters <- fg_active_batting %>% 
   semi_join(rf_future_hof_batters, by = "playerID") %>% 
   left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
   relocate(c(nameFirst, nameLast), .after = playerID)
