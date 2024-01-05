@@ -439,12 +439,13 @@ player_data <- read_csv("Cleaned-Datasets/chadwick_dictionary.csv")
 # Load in the FanGraphs data for batting and pitching
 fg_batters <- read_csv("fg_batting_data.csv")
 fg_pitchers <- read_csv("fg_pitching_data.csv")
-glimpse(fg_pitchers)
-# Remove unncessary variables from the FanGraphs data
+
+# Remove unnecessary variables from the FanGraphs data
 fg_batters <- fg_batters %>% 
   select(c(IDfg:AVG), c(`BB%`:BABIP), wOBA, WAR, `wRC+`, Spd, Def, 
          c(`AVG+`:`BABIP+`)) %>% 
   rename(fg_playerID = IDfg)
+
 fg_pitchers <- fg_pitchers %>% 
   select(c(IDfg:SO), c(`K/9`:FIP), `ERA-`, `FIP-`, `E-F`, c(`K/9+`:`LOB%+`)) %>% 
   rename(fg_playerID = IDfg)
@@ -624,7 +625,9 @@ fg_hof_batting <- fg_hof_batting %>%
   left_join(hank_aaron, by = "playerID") %>% 
   arrange(desc(all_star_appearances)) %>% 
   distinct(playerID, .keep_all = TRUE) %>% 
-  replace(is.na(.), 0)
+  replace(is.na(.), 0) %>% 
+  relocate(Name, .before = playerID) %>% 
+  mutate(`Triple Crown` = as.integer(`Triple Crown`))
 # Add the player award counts, and all_star appearances to active batting stats
 fg_active_batting <- fg_active_batting %>% 
   left_join(all_star, by = "playerID") %>% 
@@ -635,7 +638,9 @@ fg_active_batting <- fg_active_batting %>%
   left_join(hank_aaron, by = "playerID") %>% 
   arrange(desc(all_star_appearances)) %>% 
   distinct(playerID, .keep_all = TRUE) %>% 
-  replace(is.na(.), 0)
+  replace(is.na(.), 0) %>% 
+  relocate(Name, .before = playerID) %>% 
+  mutate(`Triple Crown` = as.integer(`Triple Crown`))
 
 # Add the player award counts, and all_star appearances to hof batting stats
 fg_hof_pitching <- fg_hof_pitching %>% 
@@ -646,7 +651,9 @@ fg_hof_pitching <- fg_hof_pitching %>%
   left_join(ws_mvp, by = "playerID") %>%
   arrange(desc(all_star_appearances)) %>% 
   distinct(playerID, .keep_all = TRUE) %>% 
-  replace(is.na(.), 0)
+  replace(is.na(.), 0) %>% 
+  relocate(Name, .before = playerID) %>% 
+  mutate(`Pitching Triple Crown` = as.integer(`Pitching Triple Crown`))
 
 # Add the player award counts, and all_star appearances to active batting stats
 fg_active_pitching <- fg_active_pitching %>% 
@@ -657,7 +664,9 @@ fg_active_pitching <- fg_active_pitching %>%
   left_join(ws_mvp, by = "playerID") %>%
   arrange(desc(all_star_appearances)) %>% 
   distinct(playerID, .keep_all = TRUE) %>% 
-  replace(is.na(.), 0)
+  replace(is.na(.), 0) %>% 
+  relocate(Name, .before = playerID) %>% 
+  mutate(`Pitching Triple Crown` = as.integer(`Pitching Triple Crown`))
 
 # Remove the variables for sourcing the file for model purposes
 rm(
@@ -698,7 +707,6 @@ rm(
   missing_hof_bats_chad,
   missing_hof_pitch_chad,
   mvp,
-  People,
   player_data,
   silver_slugger,
   ws_mvp,
