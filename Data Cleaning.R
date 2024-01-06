@@ -571,7 +571,7 @@ extra_awards <- tolower(
     "Hank Aaron Award"
   )
 )
-
+# Additional Award voting data for the "extra_awards"
 extra_votes <- AwardsPlayers %>% 
   mutate(awardID = tolower(awardID)) %>% 
   filter(awardID %in% extra_awards)
@@ -590,7 +590,7 @@ mvp <- extra_votes %>%
   group_by(playerID) %>% 
   summarise(num_mvp = n()) %>% 
   arrange(desc(num_mvp))
-
+# World Series MVP
 ws_mvp <- extra_votes %>% 
   filter(awardID == "world series mvp") %>% 
   group_by(playerID) %>% 
