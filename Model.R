@@ -34,7 +34,7 @@ rf_batters_recipe <-
   step_mutate(XBH = `2B` + `3B` + HR) %>% 
   step_rm(playerID, fg_playerID, GIDP, GS, InnOuts, PO, A, E, DP, PB, WP,
           G, AB, PA, `1B`, `2B`, `3B`, BB, IBB, SO, Name, Spd, CS, 
-          HBP, SF, SH, GDP) %>% 
+          HBP, SF, SH, GDP, R) %>% 
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 
@@ -110,7 +110,8 @@ rf_incorrect_batters <-
 
 # Add the statistics, and names of batters who were classified incorrectly
 rf_incorrect_batters <- fg_hof_batting %>% 
-  semi_join(rf_incorrect_batters, by = "playerID")
+  semi_join(rf_incorrect_batters, by = "playerID") %>% 
+  select(-playerID, -fg_playerID)
 
 # Random Forest Active Batters Hall of Fame Predictions
 rf_active_batters <- 
@@ -127,7 +128,10 @@ rf_future_hof_batters <-
 # Attaching the active players batting stats and names predicted to be Hall of
 # Famers some day
 rf_future_hof_batters <- fg_active_batting %>% 
-  semi_join(rf_future_hof_batters, by = "playerID")
+  semi_join(rf_future_hof_batters, by = "playerID") %>% 
+  select(-c(2:6)) %>% 
+  relocate(c(WAR, AVG, all_star_appearances, H, wOBA), .before = GIDP) %>% 
+  arrange(desc(WAR))
 
 # Feature importance for Random Forest Model
 rf_batters_feature_imp <- 
@@ -157,7 +161,7 @@ boost_batters_recipe <-
   step_mutate(XBH = `2B` + `3B` + HR) %>% 
   step_rm(playerID, fg_playerID, GIDP, GS, InnOuts, PO, A, E, DP, PB, WP,
           G, AB, PA, `1B`, `2B`, `3B`, BB, IBB, SO, Name, Spd, CS, 
-          HBP, SF, SH, GDP) %>% 
+          HBP, SF, SH, GDP, R) %>% 
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 
@@ -239,7 +243,8 @@ boost_incorrect_batters <-
   rename(Inducted = .pred_class)
 
 boost_incorrect_batters <- fg_hof_batting %>% 
-  semi_join(boost_incorrect_batters, by = "playerID")
+  semi_join(boost_incorrect_batters, by = "playerID") %>% 
+  select(-playerID, -fg_playerID)
 
 # Boosted model Active player hall of fame predictions
 boost_active_batters <- 
@@ -364,8 +369,15 @@ active_pitchers_prediction <-
   predict(fg_active_pitching) %>% 
   cbind(fg_active_pitching %>% select(playerID))
 
-rf_future_hof_pitchers <- active_pitchers_prediction %>%
-  filter(.pred_class == 1)
+rf_future_hof_pitchers <- active_pitchers_prediction %>% 
+  filter(.pred_class == 1) %>% 
+  rename(Inducted = .pred_class)
+
+rf_future_hof_pitchers <- fg_active_pitching %>% 
+  semi_join(rf_future_hof_pitchers, by = "playerID") %>% 
+  relocate(c(WAR, WHIP, ERA, `HR/9`, SO), .before = play_era) %>% 
+  arrange(desc(WAR)) %>% 
+  select(-inducted, -play_era, -playerID, -fg_playerID)
 
 rf_pitchers_feature_import <-
   rf_pitchers_fit %>%
@@ -463,8 +475,15 @@ boost_active_pitchers_prediction <-
   predict(fg_active_pitching) %>% 
   cbind(fg_active_pitching %>% select(playerID))
 
-boost_future_hof_pitchers <- boost_active_pitchers_prediction %>%
-  filter(.pred_class == 1)
+boost_future_hof_pitchers <- boost_active_pitchers_prediction %>% 
+  filter(.pred_class == 1) %>% 
+  rename(Inducted = .pred_class)
+
+boost_future_hof_pitchers <- fg_active_pitching %>% 
+  semi_join(boost_future_hof_pitchers, by = "playerID") %>% 
+  relocate(c(WAR, WHIP, ERA, `HR/9`, SO), .before = play_era) %>% 
+  arrange(desc(WAR)) %>% 
+  select(-inducted, -play_era, -playerID, -fg_playerID)
 
 # Boosted Tree Feature Importance
 boost_pitchers_feature_import <- 
