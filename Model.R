@@ -291,7 +291,7 @@ rf_pitchers_model <-
 rf_pitchers_recipe <- 
   recipe(inducted ~ ., data = pitchers_training) %>%
   step_rm(Name, playerID, fg_playerID, PO, A, E, DP, G, GS, CG, ShO, SV, 
-          IP, TBF, H, R, ER, HR, BB, IBB, HBP, WP, W, L) %>%  
+          IP, TBF, H, R, ER, HR, BB, IBB, HBP, WP, W, L, `300_wins`) %>%  
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 # Random Forest workflow for Hall of Fame pitchers
@@ -406,7 +406,7 @@ boost_pitchers_model <-
 boost_pitchers_recipe <- 
   recipe(inducted ~ ., data = pitchers_training) %>%
   step_rm(Name, playerID, fg_playerID, PO, A, E, DP, G, GS, CG, ShO, SV, 
-          IP, TBF, H, R, ER, HR, BB, IBB, HBP, WP, W, L) %>%  
+          IP, TBF, H, R, ER, HR, BB, IBB, HBP, WP, W, L, `300_wins`) %>%  
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 # Boosted tree workflow Hall of Fame pitchers
