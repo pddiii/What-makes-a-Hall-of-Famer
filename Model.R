@@ -1,6 +1,3 @@
-# Load in the cleaning data
-source("Data Cleaning.R")
-
 # Add necessary packages
 suppressPackageStartupMessages(library(tidyverse)) # For data cleaning purposes
 suppressPackageStartupMessages(library(tidymodels)) # For model creation
@@ -10,12 +7,18 @@ suppressPackageStartupMessages(library(doParallel)) # For parallel processing
 suppressPackageStartupMessages(library(caret)) # For diagnostics of models
 suppressPackageStartupMessages(library(vip)) # For variable importance
 
+# Load in the Data
+hof_batting_stats <- read_csv("./Cleaned-Datasets/Lahman/hof_batting.csv")
+hof_pitching_stats <- read_csv("./Cleaned-Datasets/Lahman/hof_pitching.csv")
+active_batting_stats <- read_csv("./Cleaned-Datasets/Lahman/active_batting.csv")
+active_pitching_stats <- read_csv("./Cleaned-Datasets/Lahman/active_pitching.csv")
+
 ### Batting
 
 # Split the Hall of Fame data for batters into a training and testing
 # set
 set.seed(1)
-data_split <- initial_split(fg_hof_batting, prop = 0.70,
+data_split <- initial_split(hof_batting_stats, prop = 0.70,
                             strata = POS)
 batters_training <- training(data_split)
 batters_testing <- testing(data_split)
@@ -31,10 +34,8 @@ rf_batters_model <-
 # Random Forest recipe for Hall of Fame Batters
 rf_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_mutate(XBH = `2B` + `3B` + HR) %>% 
-  step_rm(playerID, fg_playerID, GIDP, GS, InnOuts, PO, A, E, DP, PB, WP,
-          G, AB, PA, `1B`, `2B`, `3B`, BB, IBB, SO, Name, Spd, CS, 
-          HBP, SF, SH, GDP, R) %>% 
+  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, GS, InnOuts, E) %>% 
+  step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 
@@ -109,15 +110,16 @@ rf_incorrect_batters <-
   rename(Inducted = .pred_class)
 
 # Add the statistics, and names of batters who were classified incorrectly
-rf_incorrect_batters <- fg_hof_batting %>% 
+rf_incorrect_batters <- hof_batting_stats %>% 
   semi_join(rf_incorrect_batters, by = "playerID") %>% 
-  select(-playerID, -fg_playerID)
+  left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
+  relocate(c(nameFirst, nameLast), .after = playerID)
 
 # Random Forest Active Batters Hall of Fame Predictions
 rf_active_batters <- 
   rf_batters_fit %>% 
-  predict(fg_active_batting) %>% 
-  cbind(fg_active_batting %>% select(playerID))
+  predict(active_batting_stats) %>% 
+  cbind(active_batting_stats %>% select(playerID))
 
 # Active players predicted to be hall of famers in the future
 rf_future_hof_batters <- 
@@ -127,11 +129,10 @@ rf_future_hof_batters <-
 
 # Attaching the active players batting stats and names predicted to be Hall of
 # Famers some day
-rf_future_hof_batters <- fg_active_batting %>% 
+rf_future_hof_batters <- active_batting_stats %>% 
   semi_join(rf_future_hof_batters, by = "playerID") %>% 
-  select(-c(2:6)) %>% 
-  relocate(c(WAR, AVG, all_star_appearances, H, wOBA), .before = GIDP) %>% 
-  arrange(desc(WAR))
+  left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
+  relocate(c(nameFirst, nameLast), .after = playerID)
 
 # Feature importance for Random Forest Model
 rf_batters_feature_imp <- 
@@ -158,10 +159,8 @@ boost_batters_model <-
 # Boosted tree for batters recipe
 boost_batters_recipe <- 
   recipe(inducted ~ ., data = batters_training) %>%
-  step_mutate(XBH = `2B` + `3B` + HR) %>% 
-  step_rm(playerID, fg_playerID, GIDP, GS, InnOuts, PO, A, E, DP, PB, WP,
-          G, AB, PA, `1B`, `2B`, `3B`, BB, IBB, SO, Name, Spd, CS, 
-          HBP, SF, SH, GDP, R) %>% 
+  step_rm(playerID, GS, InnOuts, SH, SF, GIDP, E) %>% 
+  step_impute_bag(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 
@@ -242,15 +241,16 @@ boost_incorrect_batters <-
   filter(.pred_class != `batters_testing$inducted`) %>% 
   rename(Inducted = .pred_class)
 
-boost_incorrect_batters <- fg_hof_batting %>% 
+boost_incorrect_batters <- hof_batting_stats %>% 
   semi_join(boost_incorrect_batters, by = "playerID") %>% 
-  select(-playerID, -fg_playerID)
+  left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
+  relocate(c(nameFirst, nameLast), .after = playerID)
 
 # Boosted model Active player hall of fame predictions
 boost_active_batters <- 
   boost_batters_fit %>% 
-  predict(fg_active_batting) %>% 
-  cbind(fg_active_batting %>% select(playerID))
+  predict(active_batting_stats) %>% 
+  cbind(active_batting_stats %>% select(playerID))
 
 # Boosted models prediction of future Hall of Fame batters
 boost_future_hof_batters <- 
@@ -259,8 +259,10 @@ boost_future_hof_batters <-
   rename(Inducted = .pred_class)
 
 # Attach the names and statistics to the predicted future hall of famers
-boost_future_hof_batters <- fg_active_batting %>% 
-  semi_join(boost_future_hof_batters, by = "playerID")
+boost_future_hof_batters <- active_batting_stats %>% 
+  semi_join(boost_future_hof_batters, by = "playerID") %>% 
+  left_join(People %>% select(playerID, nameFirst, nameLast), by = "playerID") %>% 
+  relocate(c(nameFirst, nameLast), .after = playerID)
 
 # Feature imporance for the Boosted Model
 boost_batters_feature_imp <- 
@@ -274,8 +276,8 @@ boost_batters_feature_imp <-
 ###### Random Forest
 
 # Split data 
-set.seed(1)
-data_split <- initial_split(fg_hof_pitching, prop = 0.70,
+set.seed(10)
+data_split <- initial_split(hof_pitching_stats, prop = 0.70,
                             strata = POS)
 pitchers_training <- training(data_split)
 pitchers_testing <- testing(data_split)
@@ -290,8 +292,9 @@ rf_pitchers_model <-
 # Random Forest recipe for Hall of Fame pitchers
 rf_pitchers_recipe <- 
   recipe(inducted ~ ., data = pitchers_training) %>%
-  step_rm(Name, playerID, fg_playerID, PO, A, E, DP, G, GS, CG, ShO, SV, 
-          IP, TBF, H, R, ER, HR, BB, IBB, HBP, WP, W, L, `300_wins`) %>%  
+  step_rm(playerID) %>% 
+  ## issue with imputing with bagging: problem with cbind() in imputing method
+  step_impute_knn(all_predictors()) %>% 
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 # Random Forest workflow for Hall of Fame pitchers
@@ -300,7 +303,7 @@ rf_pitchers_wf <-
   add_recipe(rf_pitchers_recipe) %>% 
   add_model(rf_pitchers_model)
 
-set.seed(1)
+set.seed(10)
 # 10 Fold cross fold validation
 rf_folds <- vfold_cv(pitchers_training, v = 10)
 
@@ -338,7 +341,7 @@ rf_pitchers_cv_metrics <- rf_pitchers_crossval %>%
   collect_metrics()
 
 # Final fit
-set.seed(1)
+set.seed(10)
 rf_pitchers_fit <- 
   rf_pitchers_wf %>% 
   fit(data = pitchers_training)
@@ -354,30 +357,17 @@ rf_pitchers_conf_mat <-
   confusionMatrix(table(rf_pitchers_prediction$.pred_class, 
                         pitchers_testing$inducted), positive = "1")
 
-# Boost Incorrect Hall of Fame classification
-rf_incorrect_pitchers <-
-  rf_pitchers_prediction %>% 
-  filter(.pred_class != pitchers_testing$inducted) %>% 
-  rename(Inducted = .pred_class)
-
-rf_incorrect_pitchers <- fg_hof_pitching %>% 
-  semi_join(rf_incorrect_pitchers, by = "playerID")
-
 ## Prediction of current player to make Hall of Fame
 active_pitchers_prediction <-
   rf_pitchers_fit %>% 
-  predict(fg_active_pitching) %>% 
-  cbind(fg_active_pitching %>% select(playerID))
+  predict(active_pitching_stats) %>% 
+  cbind(active_pitching_stats %>% select(playerID))
 
-rf_future_hof_pitchers <- active_pitchers_prediction %>% 
-  filter(.pred_class == 1) %>% 
-  rename(Inducted = .pred_class)
-
-rf_future_hof_pitchers <- fg_active_pitching %>% 
-  semi_join(rf_future_hof_pitchers, by = "playerID") %>% 
-  relocate(c(WAR, WHIP, ERA, `HR/9`, SO), .before = play_era) %>% 
-  arrange(desc(WAR)) %>% 
-  select(-inducted, -play_era, -playerID, -fg_playerID)
+rf_future_hof_pitchers <- active_pitchers_prediction %>%
+  filter(.pred_class == 1) %>%
+  select(playerID) %>% 
+  inner_join(People, by = "playerID") %>%
+  select(nameFirst, nameLast)
 
 rf_pitchers_feature_import <-
   rf_pitchers_fit %>%
@@ -405,8 +395,8 @@ boost_pitchers_model <-
 # Boosted tree pitchers recipe
 boost_pitchers_recipe <- 
   recipe(inducted ~ ., data = pitchers_training) %>%
-  step_rm(Name, playerID, fg_playerID, PO, A, E, DP, G, GS, CG, ShO, SV, 
-          IP, TBF, H, R, ER, HR, BB, IBB, HBP, WP, W, L, `300_wins`) %>%  
+  step_rm(playerID) %>% 
+  step_impute_knn(all_predictors()) %>%
   step_normalize(all_numeric_predictors()) %>% 
   step_dummy(all_nominal(), -all_outcomes())
 # Boosted tree workflow Hall of Fame pitchers
@@ -415,7 +405,7 @@ boost_pitchers_wf <-
   add_recipe(boost_pitchers_recipe) %>% 
   add_model(boost_pitchers_model)
 
-set.seed(1)
+set.seed(10)
 # 10 Fold cross fold validation
 boost_folds <- vfold_cv(pitchers_training, v = 10)
 
@@ -455,7 +445,7 @@ boost_pitchers_crossval <-
 boost_pitchers_cv_metrics <- boost_pitchers_crossval %>% 
   collect_metrics()
 
-set.seed(1)
+set.seed(10)
 boost_pitchers_fit <- 
   boost_pitchers_wf %>% 
   fit(data = pitchers_training)
@@ -472,18 +462,14 @@ boost_pitchers_conf_mat <-
 # Boosted model Active player hall of fame predictions
 boost_active_pitchers_prediction <- 
   boost_pitchers_fit %>% 
-  predict(fg_active_pitching) %>% 
-  cbind(fg_active_pitching %>% select(playerID))
+  predict(active_pitching_stats) %>% 
+  cbind(active_pitching_stats %>% select(playerID))
 
-boost_future_hof_pitchers <- boost_active_pitchers_prediction %>% 
-  filter(.pred_class == 1) %>% 
-  rename(Inducted = .pred_class)
-
-boost_future_hof_pitchers <- fg_active_pitching %>% 
-  semi_join(boost_future_hof_pitchers, by = "playerID") %>% 
-  relocate(c(WAR, WHIP, ERA, `HR/9`, SO), .before = play_era) %>% 
-  arrange(desc(WAR)) %>% 
-  select(-inducted, -play_era, -playerID, -fg_playerID)
+boost_future_hof_pitchers <- boost_active_pitchers_prediction %>%
+  filter(.pred_class == 1) %>%
+  select(playerID) %>% 
+  inner_join(People, by = "playerID") %>%
+  select(nameFirst, nameLast)
 
 # Boosted Tree Feature Importance
 boost_pitchers_feature_import <- 
