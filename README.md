@@ -1,5 +1,3 @@
-# STATS-140XP-Final-Project
-
 National Baseball Hall of Fame Status Prediction Model using Random Forest and Gradient Boosted Decision Trees.
 
 # Contributors
@@ -26,11 +24,25 @@ National Baseball Hall of Fame Status Prediction Model using Random Forest and G
 - [caret](https://cran.r-project.org/web/packages/caret/index.html)
 - [vip](https://cran.r-project.org/web/packages/vip/index.html)
 
+## Data Collection
+
+[Baseball Reference Model Data](<Data Cleaning.R>)
+
+The "Data Cleaning.R" file contains the data cleaning, and feature engineering process for both the Baseball Reference and FanGraphs Model.
+
+[FanGraphs Model Data](fg_data.py)
+
 ## Data Dictionary
+
+### Baseball Reference Model
 
 [Batter's Dictionary](Dictionary/Batter_Variables.md)
 
 [Pitcher's Dictionary](Dictionary/Pitcher_Variables.md)
+
+### FanGraphs Model
+
+
 
 # Full Project Report
 
