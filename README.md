@@ -4,7 +4,7 @@ National Baseball Hall of Fame Status Prediction Model using Random Forest and G
 
 **Commits made post 12/16/2023 are done by Peter D. DePaul III**
 
-- **Peter D. DePaul III** - Data Cleaning, Batter's Models, and Final Report
+- **Peter D. DePaul III** - Data Cleaning, Batter's Models, FanGraphs Batting and Pitching models, and Final Report
 
 - **Nelson Duong** - Pitcher's Models & Exploratory Data Analysis
 
@@ -42,7 +42,9 @@ The "Data Cleaning.R" file contains the data cleaning, and feature engineering p
 
 ### FanGraphs Model
 
+[Batter's Dictionary](Dictionary/fg_Batter_variables.md)
 
+[Pitcher's Dictionary](Dictionary/fg_Pitcher_variables.md)
 
 # Full Project Report
 
